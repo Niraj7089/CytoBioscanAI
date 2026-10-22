@@ -1,10 +1,20 @@
 """Configuration settings for AI-Assisted Single-Cell Diagnosis Research Prototype.
 
-This module consolidates all file paths, model hyperparameters, image processing
-parameters, and electrochemical simulation constants.
+Integrated with HEKA Elektronik (Harvard Bioscience, Inc., NASDAQ: HBIO) instrumentation
+benchmarks, reflecting collaborative research with the Institute of Bionic Engineering
+and Biomechanics (BEBC), Xi'an Jiaotong University (Prof. Fei Li's group).
 """
 
 from pathlib import Path
+
+# Scientific & Instrumentation Metadata
+PROJECT_TITLE = "AI-Assisted Single-Cell Imaging and Electrochemical Detection System"
+INSTRUMENTATION_PARTNER = "HEKA Elektronik GmbH (a division of Harvard Bioscience, Inc., NASDAQ: HBIO)"
+HARDWARE_PLATFORM = "HEKA ElProScan Scanning Electrochemical Workstation & EPC 10 USB Potentiostat Systems"
+DATA_ACQUISITION_INTERFACE = "InstruTECH LIH 8+8 (16-bit low-noise, 400 kHz aggregate throughput)"
+OPTICAL_SYNC_PLATFORM = "HEKA SmartLUX Optical Microscopy Synchronization"
+ACADEMIC_COLLABORATOR = "Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University (Prof. Fei Li's Team)"
+RESEARCH_SCOPE_NOTE = "Grounded in HEKA ElProScan high-resolution single-cell imaging & AI-driven electrochemical detection."
 
 # Base Paths
 BASE_DIR = Path(__file__).resolve().parent

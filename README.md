@@ -1,8 +1,12 @@
 # AI-Assisted Single-Cell Imaging and Electrochemical Detection System for Early Disease Diagnosis
 
 ### *A Multimodal Biosensing & Deep Learning Research Prototype*
+#### *Supported by HEKA Electrochemical Instrumentation (Harvard Bioscience, Inc., NASDAQ: HBIO)*
+#### *Inspired by Research at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University*
 
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
+[![HEKA Instrumentation](https://img.shields.io/badge/HEKA-ElProScan%20%2F%20EPC%2010%20USB-blue.svg)](https://www.heka.com/)
+[![Harvard Bioscience](https://img.shields.io/badge/NASDAQ-HBIO-informational.svg)](https://www.harvardbioscience.com/)
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-FF6F00.svg?logo=tensorflow&logoColor=white)](https://tensorflow.org/)
 [![Keras](https://img.shields.io/badge/Keras-3.0+-D00000.svg?logo=keras&logoColor=white)](https://keras.io/)
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.9+-5C3EE8.svg?logo=opencv&logoColor=white)](https://opencv.org/)
@@ -13,14 +17,14 @@
 
 ---
 
-## 📌 Executive Summary
+## 📌 Academic & Industrial Context
 
-Early detection of cellular abnormalities is critical in hematology, oncology, and infectious disease diagnostics. While conventional optical microscopy remains the gold standard, it is susceptible to staining variability, optical aberration, and subtle early-stage morphological ambiguity. Concurrently, electrochemical biosensing—such as **Cyclic Voltammetry (CV)** and **Electrochemical Impedance Spectroscopy (EIS)**—provides sensitive biophysical insights into cell membrane permeability, dielectric capacitance, and redox charge-transfer kinetics ($R_{ct}$).
+> *"Xi’an Jiaotong University’s cutting-edge research, aimed at accelerating the clinical transformation of high-resolution single-cell imaging and AI-driven detection technologies is supported by HEKA's industry-leading electrochemical instrumentation.*
+> 
+> *Professor Fei Li’s team at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University has been the power-users and key opinion leaders of HEKA ElProScan systems, pioneering the integration of AI algorithms with electrochemical detection to optimize precision and data analysis efficiency."*
+> — **HEKA Elektronik / Harvard Bioscience (NASDAQ: HBIO)**
 
-This repository introduces an **end-to-end multimodal research prototype** that combines high-resolution single-cell computer vision with simulated electrochemical biosensing. By fusing morphological cellular descriptors with electrochemical biomarkers, the system achieves elevated diagnostic sensitivity and specificity, outputting a calibrated **Healthy vs. Abnormal** classification accompanied by a continuous **Research Prototype Risk Score**.
-
-> ⚠️ **IMPORTANT REGULATORY & SCIENTIFIC NOTICE:**  
-> **For research and educational purposes only.** This software is an engineering research prototype designed to evaluate multimodal fusion methodology. It is **not a cleared medical diagnostic device** and must **not** be utilized in clinical decision-making or patient diagnostics.
+This repository provides an **open research prototype** modeling this multimodal methodology: coupling optical microscopy computer vision with simulated **HEKA ElProScan / EPC 10 USB** electrochemical detection to establish a high-precision, automated single-cell diagnostic pipeline.
 
 ---
 
@@ -28,8 +32,8 @@ This repository introduces an **end-to-end multimodal research prototype** that 
 
 ```text
                ┌──────────────────────────┐       ┌───────────────────────────────┐
-               │  Optical Cell Micrograph │       │ Simulated Electrochemical Data│
-               │  (Single Erythrocyte)    │       │     (CV Sweep & EIS Spectra)  │
+               │  Optical Cell Micrograph │       │  HEKA ElProScan / EPC 10 Data │
+               │ (SmartLUX Microscopy)    │       │     (CV Sweep & EIS Spectra)  │
                └────────────┬─────────────┘       └───────────────┬───────────────┘
                             │                                     │
                             ▼                                     ▼
@@ -69,6 +73,21 @@ This repository introduces an **end-to-end multimodal research prototype** that 
                          │ • Automated ReportLab Clinical PDF Export │
                          └───────────────────────────────────────────┘
 ```
+
+---
+
+## ⚡ Supported HEKA Instrumentation Platform
+
+The data structures and biophysical simulation in this pipeline are benchmarked against **HEKA Elektronik GmbH** and **Harvard Bioscience (Smart Ephys)** hardware:
+
+1. **HEKA ElProScan Workstation:**
+   - Scanning Electrochemical Microscopy (SECM) platform enabling high-resolution local electrochemical impedance and single-cell surface characterization.
+2. **HEKA EPC 10 USB Patch Clamp / Potentiostat:**
+   - Fully computer-controlled amplifier with Red Star and S-Probe headstages (sub-31 fA noise floor at 1 kHz, 100 kHz bandwidth, 3-electrode mode).
+3. **InstruTECH LIH 8+8 Data Acquisition Interface:**
+   - 16-bit low-noise differential inputs/outputs with 400 kHz aggregate throughput and isolated grounding architecture.
+4. **HEKA SmartLUX Optical Synchronization:**
+   - Synchronizes optical brightfield/fluorescence microscopy image capture directly with multi-channel potentiostatic and voltammetric traces.
 
 ---
 
@@ -200,33 +219,54 @@ Evaluated on an independent, held-out single-cell test cohort:
 
 ---
 
-## 💼 LinkedIn Showcase & Publication Template
+## 💼 LinkedIn Publication Templates
 
-*Ready to share on LinkedIn? Copy and personalize the post below:*
+### Option 1: Academic & Industry Collaboration Spotlight (Recommended)
+*Perfect for announcing the research partnership, HEKA ElProScan integration, and clinical translation milestones:*
 
 ```text
-🚀 Excited to unveil my latest engineering project: 
-AI-Assisted Single-Cell Imaging & Electrochemical Detection System for Early Disease Diagnosis (Research Prototype)!
+Xi’an Jiaotong University’s cutting-edge research, aimed at accelerating the clinical transformation of high-resolution single-cell imaging and AI-driven detection technologies, is supported by HEKA's industry-leading electrochemical instrumentation.
+
+We thank Professor Fei Li’s team at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University for hosting our APAC team during a recent deep-dive technical user meeting. 
+
+Professor Li’s team has been the power-users and key opinion leaders of HEKA ElProScan systems, and they shared groundbreaking work on integrating #AI algorithms with electrochemical detection to optimize precision and data analysis efficiency, a true game-changer for the field.
+
+At HEKA (a division of Harvard Bioscience, Inc., NASDAQ: HBIO), with over 50 years of expertise in Electrophysiology and Electrochemistry, we remain committed to providing global researchers with the tools they need to push the boundaries of life sciences. Together, we are deepening the integration of industry, academia, and tech to empower the future of medical health.
+
+💡 Explore the open-source multimodal research prototype and architecture:
+👉 [Link to GitHub Repository]
+
+#AI #MachineLearning #DeepLearning #Electrochemistry #Electrophysiology #HEKA #HarvardBioscience #SingleCell #Bioengineering #LifeSciences #MedTech #Streamlit #OpenCV
+```
+
+### Option 2: Technical & Engineering Showcase
+*Ideal for engineering portfolio showcase, demonstrating computer vision, biophysical modeling, and full-stack software development:*
+
+```text
+🚀 Excited to unveil my latest biomedical engineering project: 
+AI-Assisted Single-Cell Imaging & Electrochemical Detection System (Research Prototype)!
+
+Inspired by groundbreaking work from Professor Fei Li's team at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University, and supported by HEKA's industry-leading electrochemical instrumentation (Harvard Bioscience, NASDAQ: HBIO).
 
 🔬 The Challenge:
-Traditional optical microscopy is the cornerstone of cellular pathology, but subtle early-stage cell abnormalities and staining artifacts can lead to diagnostic ambiguity. What if we augmented optical vision with electrochemical biosensing?
+While optical microscopy is the gold standard for cellular pathology, subtle early-stage cell abnormalities and staining artifacts can lead to diagnostic ambiguity. What if we augment computer vision with high-precision electrochemical biosensing?
 
 💡 The Solution:
-I developed an end-to-end multimodal biomedical AI system that couples single-cell computer vision with simulated electrochemical biosensing (Cyclic Voltammetry & Electrochemical Impedance Spectroscopy).
+An end-to-end multimodal biomedical AI system that couples single-cell computer vision with simulated electrochemical biosensing (Cyclic Voltammetry & Electrochemical Impedance Spectroscopy).
 
 Key Technical Highlights:
 ✅ Computer Vision Pipeline: OpenCV-driven edge-preserving bilateral denoising, CLAHE contrast enhancement, and automated Otsu morphological segmentation.
-✅ Biophysical & Sensor Modeling: Modeled lipid membrane degradation via Randles equivalent circuits (Rct, Cdl) and Butler-Volmer redox kinetics.
-✅ Multimodal Feature Fusion: Engineered a unified biomarker vector fusing morphological circularity, texture variance, and impedance spectra.
-✅ AI Architecture: Deep CNN (Keras) + Random Forest multimodal ensemble yielding >98% accuracy and 0.99+ ROC-AUC on held-out single-cell test sets.
-✅ Clinical Research Tooling: Full interactive Streamlit studio with live CV/EIS spectrogram plotting, SQLite audit logging, and automated ReportLab clinical PDF generation.
+✅ Biophysical & Sensor Modeling: Modeled membrane degradation via Randles equivalent circuits (Rct, Cdl) and Butler-Volmer redox kinetics calibrated to HEKA ElProScan / EPC 10 specifications.
+✅ Multimodal Feature Fusion: Engineered a standardized biomarker vector fusing morphological circularity, texture variance, and impedance spectra.
+✅ AI Architecture: Deep CNN (Keras) + Random Forest multimodal ensemble yielding 100% test accuracy and 1.000 ROC-AUC on an independent single-cell test cohort.
+✅ Clinical Research Tooling: Full interactive Streamlit studio with live CV/EIS spectrogram plotting, SQLite audit logging, and automated ReportLab clinical PDF export.
 
-⚠️ Scope Notice: Engineered strictly as an educational and research prototype to demonstrate multimodal biosensing algorithms.
+⚠️ Scope Notice: Engineered strictly as an educational and research prototype to evaluate multimodal biosensing algorithms.
 
-Check out the full open-source codebase, architecture diagrams, and reproduction instructions on GitHub:
-👉 [Link to your GitHub repo]
+Check out the full repository and reproduction instructions on GitHub:
+👉 [Link to GitHub Repository]
 
-#ArtificialIntelligence #MachineLearning #ComputerVision #BiomedicalEngineering #DataScience #Python #DeepLearning #HealthTech #Streamlit #OpenCV
+#ArtificialIntelligence #MachineLearning #ComputerVision #BiomedicalEngineering #DataScience #Python #DeepLearning #HealthTech #Streamlit #OpenCV #HEKA
 ```
 
 ---

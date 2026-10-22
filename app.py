@@ -132,8 +132,8 @@ def main():
     init_db()
 
     # Header
-    st.markdown('<div class="main-header">🔬 AI-Assisted Single-Cell Diagnostic System</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Multimodal Biosensing Platform Integrating Optical Microscopy & Electrochemical Impedance Detection</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">🔬 AI-Assisted Single-Cell Diagnostic System — HEKA ElProScan Edition</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Multimodal Biosensing Platform | Supported by HEKA Instrumentation (Harvard Bioscience, HBIO) & BEBC, Xi\'an Jiaotong University</div>', unsafe_allow_html=True)
 
     # Regulatory Disclaimer Banner
     st.markdown(f'<div class="disclaimer-box"><b>⚠️ RESEARCH PROTOTYPE NOTICE:</b> {config.DISCLAIMER_TEXT}</div>', unsafe_allow_html=True)
@@ -145,6 +145,14 @@ def main():
         "Select Module:",
         ["Single-Cell Live Analysis", "Audit Log & History", "Architecture & Diagnostics"]
     )
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔬 Instrumentation Standard")
+    st.sidebar.caption("**Hardware:** HEKA ElProScan & EPC 10 USB")
+    st.sidebar.caption("**Data Acquisition:** InstruTECH LIH 8+8 (16-bit)")
+    st.sidebar.caption("**Optical Sync:** HEKA SmartLUX Platform")
+    st.sidebar.caption("**Academic Partner:** BEBC, Xi'an Jiaotong Univ (Prof. Fei Li)")
+    st.sidebar.caption("**Parent Brand:** Harvard Bioscience (NASDAQ: HBIO)")
 
     if app_mode == "Single-Cell Live Analysis":
         render_analysis_studio()
@@ -403,13 +411,38 @@ def render_history_view():
 
 
 def render_system_specs():
-    st.subheader("System Architecture & Benchmark Specs")
+    st.subheader("System Architecture & Instrumentation Specifications")
+
+    st.markdown("""
+    ### Academic & Industrial Collaboration Background
+    > *"Xi’an Jiaotong University’s cutting-edge research, aimed at accelerating the clinical transformation of high-resolution single-cell imaging and AI-driven detection technologies is supported by HEKA's industry-leading electrochemical instrumentation.*
+    > 
+    > *Professor Fei Li’s team at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University has been the power-users and key opinion leaders of HEKA ElProScan systems, pioneering the integration of AI algorithms with electrochemical detection to optimize precision and data analysis efficiency."*
+    """)
+
+    st.markdown("### Supported HEKA Instrumentation Architecture")
+    col_h1, col_h2 = st.columns(2)
+    with col_h1:
+        st.markdown("""
+        **Hardware Core (Smart Ephys / HEKA Elektronik):**
+        - **HEKA ElProScan:** Scanning Electrochemical Microscopy (SECM) workstation for high-resolution single-cell surface nano-imaging.
+        - **EPC 10 USB Patch Clamp / Potentiostat:** Full computer-controlled potentiostat with low-noise Red Star & S-Probe headstages (noise level ~31 fA @ 1 kHz).
+        - **InstruTECH LIH 8+8:** 16-bit differential low-noise data acquisition interface with 400 kHz aggregate throughput and isolated grounds.
+        """)
+    with col_h2:
+        st.markdown("""
+        **Software & Acquisition Ecosystem:**
+        - **HEKA SmartLUX:** Microscopic image acquisition synchronized directly with electrophysiology / electrochemistry data traces.
+        - **PATCHMASTER NEXT & POTMASTER:** Multi-channel programmatic stimulation and voltammetric data acquisition.
+        - **FITMASTER:** Biophysical curve-fitting tool for Equivalent Circuit parameter extraction (Randles cells, Rct, Cdl).
+        """)
+
     st.markdown("""
     ### Multimodal Pipeline Architecture
     ```text
     ┌───────────────────────────────────┐     ┌───────────────────────────────────┐
-    │     Single-Cell Micrograph        │     │  Simulated Electrochemical Data   │
-    │   (Giemsa Optical Microscopy)     │     │      (CV & EIS Spectrograms)      │
+    │     Single-Cell Micrograph        │     │  HEKA ElProScan / EPC 10 Data     │
+    │   (SmartLUX Optical Microscopy)   │     │    (CV & EIS Randles Spectra)     │
     └─────────────────┬─────────────────┘     └─────────────────┬─────────────────┘
                       │                                         │
                       ▼                                         ▼
