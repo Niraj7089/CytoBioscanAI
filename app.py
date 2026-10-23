@@ -1,19 +1,29 @@
-"""Streamlit Interactive Diagnostic Dashboard for AI-Assisted Single-Cell Diagnosis.
+"""Production-Grade Flask Web Application for CytoBioScan AI.
 
-Research Prototype integrating Optical Microscopy Computer Vision,
-Electrochemical Sensor Simulation, and Multimodal AI Fusion.
+Single-Cell Imaging & Electrochemical Detection System (Research Prototype).
+Zero third-party proprietary branding or external copyright dependencies.
 """
 
+import os
 import sys
+import base64
+import io
 from pathlib import Path
-from io import BytesIO
 from datetime import datetime
-import streamlit as st
+import cv2
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from PIL import Image
+from flask import (
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    send_file,
+    Response,
+)
 
-# Add project root to sys.path
+# Project Root Setup
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
@@ -26,7 +36,6 @@ from src.sensor_simulation.simulator import (
     simulate_cyclic_voltammetry,
     simulate_impedance_spectroscopy,
     extract_sensor_features,
-    get_sensor_feature_names,
 )
 from src.feature_engineering.fusion import prepare_single_sample_features
 from src.model.multimodal_model import (
@@ -36,451 +45,225 @@ from src.model.multimodal_model import (
 from src.database.db_manager import (
     init_db,
     save_prediction,
+    fetch_recent_predictions,
     fetch_all_predictions,
     get_summary_statistics,
     clear_history,
 )
 from reports.generate_report import generate_pdf_report
 
-# Page Configuration
-st.set_page_config(
-    page_title="AI Single-Cell Diagnosis Prototype",
-    page_icon="🔬",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# Custom Styling
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #0D3B66;
-        margin-bottom: 0.2rem;
-    }
-    .sub-header {
-        font-size: 1.05rem;
-        color: #4A5568;
-        margin-bottom: 1rem;
-    }
-    .disclaimer-box {
-        background-color: #FFF9E6;
-        border-left: 5px solid #E28743;
-        padding: 0.8rem 1rem;
-        border-radius: 4px;
-        font-size: 0.85rem;
-        color: #7A4B00;
-        margin-bottom: 1.2rem;
-    }
-    .metric-card {
-        background-color: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-radius: 8px;
-        padding: 1rem;
-        text-align: center;
-    }
-    .status-healthy {
-        background-color: #E8F8F5;
-        color: #145A32;
-        padding: 0.4rem 1rem;
-        border-radius: 6px;
-        font-weight: 700;
-        font-size: 1.4rem;
-        display: inline-block;
-        border: 1px solid #A2D9CE;
-    }
-    .status-abnormal {
-        background-color: #FDEDEC;
-        color: #922B21;
-        padding: 0.4rem 1rem;
-        border-radius: 6px;
-        font-weight: 700;
-        font-size: 1.4rem;
-        display: inline-block;
-        border: 1px solid #F5B7B1;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Initialize Flask App
+app = Flask(__name__, template_folder="templates")
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
 
 
-def plot_sensor_signals(cv_data: dict, eis_data: dict):
-    """Render interactive dual-panel plot for Cyclic Voltammetry and EIS Nyquist."""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.8), dpi=150)
-
-    # 1. Cyclic Voltammogram
-    ax1.plot(cv_data["potential_v"], cv_data["current_ua"], color="#0066cc", lw=2)
-    ax1.axhline(0, color="#888888", linestyle="--", lw=0.8, alpha=0.7)
-    ax1.axvline(0, color="#888888", linestyle="--", lw=0.8, alpha=0.7)
-    ax1.set_title("Cyclic Voltammogram (CV)", fontsize=11, fontweight="bold")
-    ax1.set_xlabel("Potential vs. Ref (V)", fontsize=9)
-    ax1.set_ylabel("Current (µA)", fontsize=9)
-    ax1.grid(True, linestyle=":", alpha=0.6)
-
-    # 2. Nyquist Plot
-    ax2.plot(eis_data["z_real_ohm"], eis_data["z_imag_ohm"], "o-", color="#800080", ms=3.5, lw=1.5)
-    ax2.set_title("EIS Nyquist Spectrum (-Z'' vs Z')", fontsize=11, fontweight="bold")
-    ax2.set_xlabel("Z' Real (Ω)", fontsize=9)
-    ax2.set_ylabel("-Z'' Imaginary (Ω)", fontsize=9)
-    ax2.grid(True, linestyle=":", alpha=0.6)
-
-    plt.tight_layout()
-    return fig
+def np_image_to_base64(img_rgb: np.ndarray) -> str:
+    """Encode an RGB numpy array into a base64 PNG string."""
+    img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+    _, buffer = cv2.imencode(".png", img_bgr)
+    return base64.b64encode(buffer).decode("utf-8")
 
 
-def main():
+@app.before_request
+def setup_database_once():
+    """Ensure SQLite database is ready before servicing requests."""
     init_db()
 
-    # Header
-    st.markdown('<div class="main-header">🔬 AI-Assisted Single-Cell Diagnostic System — HEKA ElProScan Edition</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Multimodal Biosensing Platform | Supported by HEKA Instrumentation (Harvard Bioscience, HBIO) & BEBC, Xi\'an Jiaotong University</div>', unsafe_allow_html=True)
 
-    # Regulatory Disclaimer Banner
-    st.markdown(f'<div class="disclaimer-box"><b>⚠️ RESEARCH PROTOTYPE NOTICE:</b> {config.DISCLAIMER_TEXT}</div>', unsafe_allow_html=True)
-
-    # Sidebar Navigation
-    st.sidebar.image("https://img.icons8.com/fluency/96/microscope.png", width=64)
-    st.sidebar.title("Navigation")
-    app_mode = st.sidebar.radio(
-        "Select Module:",
-        ["Single-Cell Live Analysis", "Audit Log & History", "Architecture & Diagnostics"]
-    )
-
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🔬 Instrumentation Standard")
-    st.sidebar.caption("**Hardware:** HEKA ElProScan & EPC 10 USB")
-    st.sidebar.caption("**Data Acquisition:** InstruTECH LIH 8+8 (16-bit)")
-    st.sidebar.caption("**Optical Sync:** HEKA SmartLUX Platform")
-    st.sidebar.caption("**Academic Partner:** BEBC, Xi'an Jiaotong Univ (Prof. Fei Li)")
-    st.sidebar.caption("**Parent Brand:** Harvard Bioscience (NASDAQ: HBIO)")
-
-    if app_mode == "Single-Cell Live Analysis":
-        render_analysis_studio()
-    elif app_mode == "Audit Log & History":
-        render_history_view()
-    elif app_mode == "Architecture & Diagnostics":
-        render_system_specs()
+@app.route("/")
+def index():
+    """Render the main interactive diagnostic studio dashboard."""
+    return render_template("index.html")
 
 
-def render_analysis_studio():
-    st.subheader("Single-Cell Specimen Analysis")
+@app.route("/api/sample-images", methods=["GET"])
+def get_sample_images():
+    """Retrieve available benchmark library images for fast demo testing."""
+    category = request.args.get("category", "Healthy")
+    target_dir = config.TEST_DIR / category
 
-    col_input_left, col_input_right = st.columns([1, 1])
+    if not target_dir.exists():
+        return jsonify({"samples": []})
 
-    # Left: Image Selection
-    with col_input_left:
-        st.markdown("#### 1. Optical Microscopy Input")
-        img_source = st.radio(
-            "Image Input Source:",
-            ["Choose from Test Library", "Upload Image File (.png, .jpg)"],
-            horizontal=True
+    samples = []
+    for p in sorted(target_dir.glob("*.png"))[:10]:
+        samples.append({
+            "name": p.name,
+            "path": str(p.relative_to(config.BASE_DIR)),
+            "url": f"/api/image-preview?path={str(p.relative_to(config.BASE_DIR))}",
+        })
+    return jsonify({"samples": samples})
+
+
+@app.route("/api/image-preview", methods=["GET"])
+def image_preview():
+    """Serve image preview from repository file path."""
+    rel_path = request.args.get("path")
+    if not rel_path:
+        return "Missing path", 400
+
+    full_path = (config.BASE_DIR / rel_path).resolve()
+    # Path traversal protection
+    if not str(full_path).startswith(str(config.BASE_DIR)):
+        return "Unauthorized path", 403
+
+    if not full_path.exists():
+        return "File not found", 404
+
+    return send_file(full_path, mimetype="image/png")
+
+
+@app.route("/api/analyze", methods=["POST"])
+def analyze():
+    """Execute complete multimodal AI analysis on a single cell."""
+    try:
+        # 1. Resolve Image Input
+        if "image_file" in request.files and request.files["image_file"].filename != "":
+            file = request.files["image_file"]
+            image_bytes = file.read()
+            sample_id = Path(file.filename).stem
+            raw_rgb = load_image(image_bytes)
+        elif "preset_path" in request.form and request.form["preset_path"]:
+            rel_path = request.form["preset_path"]
+            full_path = (config.BASE_DIR / rel_path).resolve()
+            if not full_path.exists() or not str(full_path).startswith(str(config.BASE_DIR)):
+                return jsonify({"error": "Invalid benchmark sample path"}), 400
+            sample_id = full_path.stem
+            raw_rgb = load_image(full_path)
+        else:
+            return jsonify({"error": "No image file or benchmark sample provided"}), 400
+
+        # 2. Parse Sensor Simulation Options
+        cell_condition = request.form.get("cell_condition", "Healthy")
+        noise_level = float(request.form.get("noise_level", 0.04))
+        notes = request.form.get("notes", "")
+
+        # 3. Image Preprocessing & Feature Extraction
+        norm_img, enhanced_uint8 = preprocess_image(raw_rgb)
+        mask, primary_contour, overlay = segment_cell(enhanced_uint8)
+        img_features = extract_image_features(enhanced_uint8, mask=mask)
+
+        # 4. Electrochemical Sensor Simulation (CV & EIS)
+        cv_data = simulate_cyclic_voltammetry(cell_type=cell_condition, noise_level=noise_level)
+        eis_data = simulate_impedance_spectroscopy(cell_type=cell_condition, noise_level=noise_level)
+        sensor_features = extract_sensor_features(cv_data, eis_data)
+
+        # 5. Multimodal Feature Fusion & Inference
+        _, scaled_vec = prepare_single_sample_features(img_features, sensor_features)
+        model = load_multimodal_model()
+
+        pred_idx = int(model.predict(scaled_vec)[0])
+        probabilities = model.predict_proba(scaled_vec)[0]
+        p_abnormal = float(probabilities[1])
+        prediction = config.INV_LABEL_MAP[pred_idx]
+        confidence_pct = round(float(np.max(probabilities)) * 100.0, 1)
+
+        # 6. Continuous Research Prototype Risk Score
+        risk_score = compute_research_risk_score(
+            p_abnormal=p_abnormal,
+            image_features=img_features,
+            sensor_features=sensor_features,
         )
 
-        image_to_process = None
-        sample_name = "Specimen"
-
-        if img_source == "Choose from Test Library":
-            preset_class = st.selectbox("Select Target Class:", ["Healthy (Uninfected RBC)", "Abnormal (Parasitized RBC)"])
-            class_folder = "Healthy" if "Healthy" in preset_class else "Abnormal"
-            sample_dir = config.TEST_DIR / class_folder
-
-            if sample_dir.exists():
-                available_files = sorted(list(sample_dir.glob("*.png")))
-                if available_files:
-                    selected_file = st.selectbox("Select Benchmark Cell Sample:", available_files, format_func=lambda x: x.name)
-                    image_to_process = str(selected_file)
-                    sample_name = selected_file.stem
-                else:
-                    st.warning("No sample files found in library directory. Please train or download the dataset.")
-            else:
-                st.warning("Dataset directory not initialized.")
-        else:
-            uploaded_file = st.file_uploader("Upload Single-Cell Micrograph", type=["png", "jpg", "jpeg"])
-            if uploaded_file is not None:
-                image_to_process = uploaded_file.read()
-                sample_name = Path(uploaded_file.name).stem
-
-    # Right: Sensor Selection
-    with col_input_right:
-        st.markdown("#### 2. Electrochemical Sensor Input")
-        sensor_mode = st.radio(
-            "Sensor Data Source:",
-            ["Simulate Realistic Electrochemical Signal", "Upload Custom Sensor CSV"],
-            horizontal=True
+        # 7. Database Persistence
+        db_id = save_prediction(
+            sample_id=sample_id,
+            image_name=sample_id,
+            prediction=prediction,
+            confidence=confidence_pct,
+            risk_score=risk_score,
+            cell_area=img_features.get("cell_area"),
+            circularity=img_features.get("circularity"),
+            peak_current=sensor_features.get("peak_anodic_current"),
+            rct_impedance=sensor_features.get("charge_transfer_resistance"),
+            notes=notes,
         )
 
-        custom_sensor_data = None
-        sim_class = "Healthy"
-
-        if sensor_mode == "Simulate Realistic Electrochemical Signal":
-            st.info("Simulating Cyclic Voltammetry (CV) & Impedance Spectroscopy (EIS) across gold microelectrodes.")
-            sim_class = st.selectbox("Simulate Cell Membrane Condition:", ["Healthy (Intact Membrane)", "Abnormal (Compromised Membrane)"])
-            sim_class_key = "Healthy" if "Healthy" in sim_class else "Abnormal"
-            noise_slider = st.slider("Electrochemical Noise Level (%):", min_value=1.0, max_value=15.0, value=4.0, step=0.5) / 100.0
-
-            # Generate sensor curves
-            cv_sim = simulate_cyclic_voltammetry(cell_type=sim_class_key, noise_level=noise_slider)
-            eis_sim = simulate_impedance_spectroscopy(cell_type=sim_class_key, noise_level=noise_slider)
-            sensor_features = extract_sensor_features(cv_sim, eis_sim)
-        else:
-            sensor_file = st.file_uploader("Upload Sensor Measurement CSV", type=["csv"])
-            if sensor_file is not None:
-                df = pd.read_csv(sensor_file)
-                st.write("Uploaded Sensor Metrics:", df.head(1))
-                sensor_features = {k: float(df[k].iloc[0]) for k in get_sensor_feature_names() if k in df.columns}
-                cv_sim = simulate_cyclic_voltammetry(cell_type="Healthy", noise_level=0.03)
-                eis_sim = simulate_impedance_spectroscopy(cell_type="Healthy", noise_level=0.03)
-            else:
-                st.info("Please upload a CSV or switch to simulation mode.")
-                cv_sim = simulate_cyclic_voltammetry(cell_type="Healthy", noise_level=0.04)
-                eis_sim = simulate_impedance_spectroscopy(cell_type="Healthy", noise_level=0.04)
-                sensor_features = extract_sensor_features(cv_sim, eis_sim)
-
-    st.markdown("---")
-    analyst_notes = st.text_input("Analyst Observations / Study Notes:", placeholder="E.g., In-vitro assay batch #4, 37°C incubation.")
-
-    analyze_btn = st.button("🚀 Run Multimodal AI Analysis", type="primary", use_container_width=True)
-
-    if analyze_btn:
-        if image_to_process is None:
-            st.error("Please provide or select a single-cell image before analyzing.")
-            return
-
-        with st.spinner("Processing optical micrograph, segmenting cell, and performing multimodal AI inference..."):
-            # Check model files
-            if not config.FUSION_MODEL_PATH.exists() or not config.SCALER_PATH.exists():
-                st.error("Model artifacts not found! Please run 'python train.py' first to train the models.")
-                return
-
-            # Preprocess & Segment
-            norm_img, enhanced_uint8 = preprocess_image(image_to_process)
-            mask, contour, overlay = segment_cell(enhanced_uint8)
-            img_features = extract_image_features(enhanced_uint8, mask=mask)
-
-            # Feature Fusion & Inference
-            _, scaled_vec = prepare_single_sample_features(img_features, sensor_features)
-            model = load_multimodal_model()
-
-            pred_class_idx = int(model.predict(scaled_vec)[0])
-            probabilities = model.predict_proba(scaled_vec)[0]
-            p_abnormal = float(probabilities[1])
-            predicted_class = config.INV_LABEL_MAP[pred_class_idx]
-            confidence_pct = round(float(np.max(probabilities)) * 100.0, 1)
-
-            risk_score = compute_research_risk_score(
-                p_abnormal=p_abnormal,
-                image_features=img_features,
-                sensor_features=sensor_features
-            )
-
-            # Save to SQLite
-            rec_id = save_prediction(
-                sample_id=sample_name,
-                image_name=sample_name,
-                prediction=predicted_class,
-                confidence=confidence_pct,
-                risk_score=risk_score,
-                cell_area=img_features.get("cell_area"),
-                circularity=img_features.get("circularity"),
-                peak_current=sensor_features.get("peak_anodic_current"),
-                rct_impedance=sensor_features.get("charge_transfer_resistance"),
-                notes=analyst_notes,
-            )
-
-        # Presentation of Results
-        st.success(f"Analysis complete for sample **{sample_name}** (Audit Record #{rec_id})")
-
-        # Top Metric Cards
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.markdown("##### Multimodal Classification")
-            if predicted_class == "Abnormal":
-                st.markdown('<span class="status-abnormal">ABNORMAL</span>', unsafe_allow_html=True)
-            else:
-                st.markdown('<span class="status-healthy">HEALTHY</span>', unsafe_allow_html=True)
-            st.caption("Morphological + Electrochemical Consensus")
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        with col_m2:
-            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.markdown("##### Model Confidence")
-            st.markdown(f"<h2 style='color:#0D3B66;margin:0;'>{confidence_pct}%</h2>", unsafe_allow_html=True)
-            st.caption(f"Posterior Probability: {probabilities[pred_class_idx]:.4f}")
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        with col_m3:
-            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.markdown("##### Research Risk Score")
-            risk_color = "#922B21" if risk_score >= 0.65 else ("#E28743" if risk_score >= 0.35 else "#145A32")
-            st.markdown(f"<h2 style='color:{risk_color};margin:0;'>{risk_score:.2f} <small style='font-size:0.9rem;color:#666;'>/ 1.00</small></h2>", unsafe_allow_html=True)
-            risk_desc = "High Cellular Atypia" if risk_score >= 0.65 else ("Moderate Anomaly" if risk_score >= 0.35 else "Low Anomaly")
-            st.caption(risk_desc)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("---")
-
-        # Visualizations
-        tab_vis1, tab_vis2 = st.tabs(["🖼️ Image Processing & Segmentation", "⚡ Electrochemical Signatures"])
-
-        with tab_vis1:
-            col_v1, col_v2, col_v3 = st.columns(3)
-            with col_v1:
-                st.image(load_image(image_to_process), caption="Raw Microscopic Cell", use_container_width=True)
-            with col_v2:
-                st.image(enhanced_uint8, caption="Contrast Enhanced (CLAHE)", use_container_width=True)
-            with col_v3:
-                st.image(overlay, caption="Segmented Cell & Boundary Outline", use_container_width=True)
-
-        with tab_vis2:
-            sensor_fig = plot_sensor_signals(cv_sim, eis_sim)
-            st.pyplot(sensor_fig)
-
-        # Quantitative Breakdown Tables
-        st.markdown("#### Quantitative Multimodal Biomarkers")
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            st.markdown("**Morphological & Texture Descriptors**")
-            df_img = pd.DataFrame([
-                {"Biomarker": "Cell Area (px²)", "Value": img_features.get("cell_area")},
-                {"Biomarker": "Circularity (0 to 1)", "Value": img_features.get("circularity")},
-                {"Biomarker": "Aspect Ratio", "Value": img_features.get("aspect_ratio")},
-                {"Biomarker": "Texture Variance", "Value": img_features.get("texture_variance")},
-                {"Biomarker": "Mean Intensity", "Value": img_features.get("mean_intensity")},
-            ])
-            st.table(df_img)
-
-        with col_f2:
-            st.markdown("**Electrochemical Sensor Descriptors**")
-            df_sen = pd.DataFrame([
-                {"Biomarker": "Peak Anodic Current (Ipa)", "Value": f"{sensor_features.get('peak_anodic_current')} µA"},
-                {"Biomarker": "Charge Transfer Res. (Rct)", "Value": f"{sensor_features.get('charge_transfer_resistance')} Ω"},
-                {"Biomarker": "Capacitance (Cdl)", "Value": f"{sensor_features.get('double_layer_capacitance_uf')} µF"},
-                {"Biomarker": "Peak Separation (ΔEp)", "Value": f"{sensor_features.get('delta_peak_potential')} mV"},
-                {"Biomarker": "Impedance |Z| at 1 Hz", "Value": f"{sensor_features.get('impedance_low_freq')} Ω"},
-            ])
-            st.table(df_sen)
-
-        # Generate & Download Report
-        st.markdown("#### Export Documentation")
+        # 8. Clinical PDF Report Generation
         pdf_path = generate_pdf_report(
-            sample_id=sample_name,
-            prediction=predicted_class,
+            sample_id=sample_id,
+            prediction=prediction,
             confidence=confidence_pct,
             risk_score=risk_score,
             image_features=img_features,
             sensor_features=sensor_features,
-            notes=analyst_notes
-        )
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
-
-        st.download_button(
-            label="📄 Download Official PDF Research Report",
-            data=pdf_bytes,
-            file_name=pdf_path.name,
-            mime="application/pdf",
-            type="secondary"
+            notes=notes,
         )
 
+        # 9. Format Response Payload
+        response_data = {
+            "sample_id": sample_id,
+            "prediction": prediction,
+            "confidence": confidence_pct,
+            "risk_score": risk_score,
+            "p_abnormal": round(p_abnormal, 4),
+            "db_record_id": db_id,
+            "report_filename": pdf_path.name,
+            "image_features": img_features,
+            "sensor_features": sensor_features,
+            "vis_raw": np_image_to_base64(raw_rgb),
+            "vis_enhanced": np_image_to_base64(enhanced_uint8),
+            "vis_overlay": np_image_to_base64(overlay),
+            "cv_data": {
+                "potential_v": cv_data["potential_v"].tolist(),
+                "current_ua": cv_data["current_ua"].tolist(),
+            },
+            "eis_data": {
+                "frequency_hz": eis_data["frequency_hz"].tolist(),
+                "z_real_ohm": eis_data["z_real_ohm"].tolist(),
+                "z_imag_ohm": eis_data["z_imag_ohm"].tolist(),
+            },
+        }
+        return jsonify(response_data)
 
-def render_history_view():
-    st.subheader("Audit Log & Specimen History")
+    except Exception as e:
+        app.logger.error(f"Inference error: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/history", methods=["GET"])
+def get_history():
+    """Retrieve audit history records and telemetry summary statistics."""
+    records = fetch_recent_predictions(limit=100)
     stats = get_summary_statistics()
+    return jsonify({"records": records, "stats": stats})
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total Cells Scanned", stats["total_scans"])
-    c2.metric("Abnormal Detection Rate", f"{stats['abnormal_rate']}%")
-    c3.metric("Average Model Confidence", f"{stats['avg_confidence']}%")
-    c4.metric("Average Research Risk Score", f"{stats['avg_risk_score']}")
 
+@app.route("/api/history/clear", methods=["POST"])
+def clear_audit_history():
+    """Clear all records from audit database."""
+    clear_history()
+    return jsonify({"status": "cleared"})
+
+
+@app.route("/api/download-report/<filename>", methods=["GET"])
+def download_report(filename):
+    """Download generated clinical research PDF report."""
+    safe_filename = Path(filename).name
+    report_file = (config.REPORTS_DIR / safe_filename).resolve()
+
+    if not report_file.exists() or not str(report_file).startswith(str(config.REPORTS_DIR)):
+        return "Report file not found", 404
+
+    return send_file(report_file, mimetype="application/pdf", as_attachment=True, download_name=safe_filename)
+
+
+@app.route("/api/export-csv", methods=["GET"])
+def export_csv():
+    """Stream SQLite audit history table as a CSV download."""
     df = fetch_all_predictions()
-    if df.empty:
-        st.info("No prediction history recorded yet. Run a single-cell analysis to log results.")
-    else:
-        st.dataframe(df, use_container_width=True)
-
-        col_h1, col_h2 = st.columns([1, 1])
-        with col_h1:
-            csv_data = df.to_csv(index=False).encode("utf-8")
-            st.download_button("📥 Export History to CSV", csv_data, "prediction_audit_log.csv", "text/csv")
-        with col_h2:
-            if st.button("🗑️ Clear Audit History", type="secondary"):
-                clear_history()
-                st.rerun()
-
-
-def render_system_specs():
-    st.subheader("System Architecture & Instrumentation Specifications")
-
-    st.markdown("""
-    ### Academic & Industrial Collaboration Background
-    > *"Xi’an Jiaotong University’s cutting-edge research, aimed at accelerating the clinical transformation of high-resolution single-cell imaging and AI-driven detection technologies is supported by HEKA's industry-leading electrochemical instrumentation.*
-    > 
-    > *Professor Fei Li’s team at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University has been the power-users and key opinion leaders of HEKA ElProScan systems, pioneering the integration of AI algorithms with electrochemical detection to optimize precision and data analysis efficiency."*
-    """)
-
-    st.markdown("### Supported HEKA Instrumentation Architecture")
-    col_h1, col_h2 = st.columns(2)
-    with col_h1:
-        st.markdown("""
-        **Hardware Core (Smart Ephys / HEKA Elektronik):**
-        - **HEKA ElProScan:** Scanning Electrochemical Microscopy (SECM) workstation for high-resolution single-cell surface nano-imaging.
-        - **EPC 10 USB Patch Clamp / Potentiostat:** Full computer-controlled potentiostat with low-noise Red Star & S-Probe headstages (noise level ~31 fA @ 1 kHz).
-        - **InstruTECH LIH 8+8:** 16-bit differential low-noise data acquisition interface with 400 kHz aggregate throughput and isolated grounds.
-        """)
-    with col_h2:
-        st.markdown("""
-        **Software & Acquisition Ecosystem:**
-        - **HEKA SmartLUX:** Microscopic image acquisition synchronized directly with electrophysiology / electrochemistry data traces.
-        - **PATCHMASTER NEXT & POTMASTER:** Multi-channel programmatic stimulation and voltammetric data acquisition.
-        - **FITMASTER:** Biophysical curve-fitting tool for Equivalent Circuit parameter extraction (Randles cells, Rct, Cdl).
-        """)
-
-    st.markdown("""
-    ### Multimodal Pipeline Architecture
-    ```text
-    ┌───────────────────────────────────┐     ┌───────────────────────────────────┐
-    │     Single-Cell Micrograph        │     │  HEKA ElProScan / EPC 10 Data     │
-    │   (SmartLUX Optical Microscopy)   │     │    (CV & EIS Randles Spectra)     │
-    └─────────────────┬─────────────────┘     └─────────────────┬─────────────────┘
-                      │                                         │
-                      ▼                                         ▼
-    ┌───────────────────────────────────┐     ┌───────────────────────────────────┐
-    │ Image Preprocessing & CLAHE       │     │ Randles Circuit Extraction        │
-    │ Morphological Otsu Segmentation   │     │ (Peak Current, Rct, Cdl, Phase)   │
-    └─────────────────┬─────────────────┘     └─────────────────┬─────────────────┘
-                      │                                         │
-                      └───────────────────┬─────────────────────┘
-                                          ▼
-                      ┌───────────────────────────────────────┐
-                      │ Multimodal Feature Fusion & Scaling   │
-                      └───────────────────┬───────────────────┘
-                                          ▼
-                      ┌───────────────────────────────────────┐
-                      │ Random Forest Multimodal Ensemble     │
-                      └───────────────────┬───────────────────┘
-                                          ▼
-                      ┌───────────────────────────────────────┐
-                      │    Healthy / Abnormal Classification  │
-                      │      + Research Prototype Risk Score  │
-                      └───────────────────────────────────────┘
-    ```
-    """)
-
-    st.markdown("### Published Evaluation Metrics")
-    metrics_file = config.REPORTS_DIR / "confusion_matrix.png"
-    if metrics_file.exists():
-        c_m1, c_m2 = st.columns(2)
-        with c_m1:
-            st.image(str(config.REPORTS_DIR / "confusion_matrix.png"), caption="Confusion Matrix")
-        with c_m2:
-            st.image(str(config.REPORTS_DIR / "roc_curve.png"), caption="ROC Curve")
-
-    feat_imp = config.REPORTS_DIR / "feature_importance.png"
-    if feat_imp.exists():
-        st.image(str(feat_imp), caption="Top Multimodal Biomarker Importances")
+    csv_bytes = df.to_csv(index=False).encode("utf-8")
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=cytobioscan_audit_log.csv"}
+    )
 
 
 if __name__ == "__main__":
-    main()
+    print("=" * 70)
+    print("CytoBioScan AI — Multimodal Single-Cell Diagnostic System")
+    print("Production Flask Web Interface")
+    print("Starting server at: http://localhost:5000")
+    print("=" * 70)
+    app.run(host="127.0.0.1", port=5000, debug=False)

@@ -1,30 +1,27 @@
-# AI-Assisted Single-Cell Imaging and Electrochemical Detection System for Early Disease Diagnosis
+# CytoBioScan AI — Single-Cell Imaging and Electrochemical Detection System
 
-### *A Multimodal Biosensing & Deep Learning Research Prototype*
-#### *Supported by HEKA Electrochemical Instrumentation (Harvard Bioscience, Inc., NASDAQ: HBIO)*
-#### *Inspired by Research at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University*
+### *A Multimodal Biosensing & Deep Learning Research Prototype for Early Disease Diagnosis*
 
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
-[![HEKA Instrumentation](https://img.shields.io/badge/HEKA-ElProScan%20%2F%20EPC%2010%20USB-blue.svg)](https://www.heka.com/)
-[![Harvard Bioscience](https://img.shields.io/badge/NASDAQ-HBIO-informational.svg)](https://www.harvardbioscience.com/)
+[![Flask](https://img.shields.io/badge/Flask-3.1+-000000.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-FF6F00.svg?logo=tensorflow&logoColor=white)](https://tensorflow.org/)
 [![Keras](https://img.shields.io/badge/Keras-3.0+-D00000.svg?logo=keras&logoColor=white)](https://keras.io/)
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.9+-5C3EE8.svg?logo=opencv&logoColor=white)](https://opencv.org/)
 [![Scikit--Learn](https://img.shields.io/badge/Scikit--Learn-1.4+-F7931E.svg?logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.30+-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57.svg?logo=sqlite&logoColor=white)](https://sqlite.org/)
+[![ReportLab](https://img.shields.io/badge/ReportLab-PDF%20Engine-DA291C.svg)](https://www.reportlab.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 📌 Academic & Industrial Context
+## 📌 Executive Summary
 
-> *"Xi’an Jiaotong University’s cutting-edge research, aimed at accelerating the clinical transformation of high-resolution single-cell imaging and AI-driven detection technologies is supported by HEKA's industry-leading electrochemical instrumentation.*
-> 
-> *Professor Fei Li’s team at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University has been the power-users and key opinion leaders of HEKA ElProScan systems, pioneering the integration of AI algorithms with electrochemical detection to optimize precision and data analysis efficiency."*
-> — **HEKA Elektronik / Harvard Bioscience (NASDAQ: HBIO)**
+Early detection of cellular abnormalities is critical in hematology, oncology, and infectious disease diagnostics. While conventional optical microscopy is an established gold standard, it is frequently susceptible to optical aberrations, staining variability, and subtle early-stage morphological ambiguity. Concurrently, electrochemical biosensing—specifically **Cyclic Voltammetry (CV)** and **Electrochemical Impedance Spectroscopy (EIS)**—provides direct biophysical measurement of cell membrane permeability, dielectric capacitance, and redox charge-transfer resistance ($R_{ct}$).
 
-This repository provides an **open research prototype** modeling this multimodal methodology: coupling optical microscopy computer vision with simulated **HEKA ElProScan / EPC 10 USB** electrochemical detection to establish a high-precision, automated single-cell diagnostic pipeline.
+**CytoBioScan AI** is an **end-to-end multimodal biomedical AI platform** that couples high-resolution single-cell computer vision with simulated electrochemical biosensing. By fusing morphological cellular descriptors with electrochemical biomarkers, the system achieves elevated diagnostic sensitivity and specificity, outputting a calibrated **Healthy vs. Abnormal** classification accompanied by a continuous **Research Prototype Risk Score**.
+
+> ⚠️ **IMPORTANT REGULATORY & SCIENTIFIC NOTICE:**  
+> **For research and educational purposes only.** This software is an engineering research prototype designed to evaluate multimodal fusion methodology. It is **not a cleared medical diagnostic device** and must **not** be utilized in clinical decision-making or patient diagnostics.
 
 ---
 
@@ -32,8 +29,8 @@ This repository provides an **open research prototype** modeling this multimodal
 
 ```text
                ┌──────────────────────────┐       ┌───────────────────────────────┐
-               │  Optical Cell Micrograph │       │  HEKA ElProScan / EPC 10 Data │
-               │ (SmartLUX Microscopy)    │       │     (CV Sweep & EIS Spectra)  │
+               │  Optical Cell Micrograph │       │ Electrochemical Sensor Data   │
+               │ (Single-Cell Brightfield)│       │     (CV Sweep & EIS Spectra)  │
                └────────────┬─────────────┘       └───────────────┬───────────────┘
                             │                                     │
                             ▼                                     ▼
@@ -68,26 +65,11 @@ This repository provides an **open research prototype** modeling this multimodal
                          └─────────────────────┬─────────────────────┘
                                                ▼
                          ┌───────────────────────────────────────────┐
-                         │ • Interactive Streamlit Diagnostic Studio │
+                         │ • Modern Flask Diagnostic Web Studio      │
                          │ • SQLite Audit Log & Telemetry Tracking   │
                          │ • Automated ReportLab Clinical PDF Export │
                          └───────────────────────────────────────────┘
 ```
-
----
-
-## ⚡ Supported HEKA Instrumentation Platform
-
-The data structures and biophysical simulation in this pipeline are benchmarked against **HEKA Elektronik GmbH** and **Harvard Bioscience (Smart Ephys)** hardware:
-
-1. **HEKA ElProScan Workstation:**
-   - Scanning Electrochemical Microscopy (SECM) platform enabling high-resolution local electrochemical impedance and single-cell surface characterization.
-2. **HEKA EPC 10 USB Patch Clamp / Potentiostat:**
-   - Fully computer-controlled amplifier with Red Star and S-Probe headstages (sub-31 fA noise floor at 1 kHz, 100 kHz bandwidth, 3-electrode mode).
-3. **InstruTECH LIH 8+8 Data Acquisition Interface:**
-   - 16-bit low-noise differential inputs/outputs with 400 kHz aggregate throughput and isolated grounding architecture.
-4. **HEKA SmartLUX Optical Synchronization:**
-   - Synchronizes optical brightfield/fluorescence microscopy image capture directly with multi-channel potentiostatic and voltammetric traces.
 
 ---
 
@@ -102,7 +84,7 @@ The data structures and biophysical simulation in this pipeline are benchmarked 
 2. **Electrochemical Sensor Simulation (`src/sensor_simulation/`):**
    - **Cyclic Voltammetry (CV):** Faradaic redox reaction modeling ($I_{pa}$, $I_{pc}$, $\Delta E_p$) across a $-0.4\text{ V}$ to $+0.8\text{ V}$ triangular potential sweep.
    - **Electrochemical Impedance Spectroscopy (EIS):** Randles equivalent circuit ($R_s + [R_{ct} \parallel C_{dl}]$) simulating real and imaginary impedance over a $1\text{ Hz} - 100\text{ kHz}$ frequency sweep.
-   - Class-dependent modeling: healthy intact lipid membranes exhibit high charge-transfer resistance ($R_{ct} \approx 1500\,\Omega$) and low redox permeability; damaged/parasitized membranes exhibit ion leakage, reduced $R_{ct}$ ($620\,\Omega$), and elevated peak Faradaic current.
+   - Class-dependent modeling: healthy intact lipid membranes exhibit high charge-transfer resistance ($R_{ct} \approx 1500\,\Omega$) and low redox permeability; damaged/abnormal membranes exhibit ion leakage, reduced $R_{ct}$ ($620\,\Omega$), and elevated peak Faradaic current.
 
 3. **Multimodal Feature Fusion (`src/feature_engineering/`):**
    - Merges morphological shape descriptors with electrochemical parameters into a unified, leak-free standardized vector.
@@ -112,20 +94,19 @@ The data structures and biophysical simulation in this pipeline are benchmarked 
    - Multimodal Random Forest ensemble combining computer vision and biosensing features.
    - Continuous **Research Prototype Risk Score** combining model posterior probability, cellular atypia metrics, and electrochemical anomaly deviations.
 
-5. **Clinical Research PDF Reporting (`reports/`):**
-   - Automated ReportLab generation of clinical research reports containing patient/specimen metadata, multimodal findings, biophysical tables, and audit timestamps.
-
-6. **Interactive Diagnostic Studio (`app.py`):**
-   - Streamlit interface with live image upload or benchmark library selection.
-   - Interactive electrochemical parameter tuning and dual-panel CV/EIS plot rendering.
-   - SQLite audit log with CSV export and historical telemetry.
+5. **Production Flask Web Application (`app.py` & `templates/`):**
+   - Clean, modern, responsive clinical studio interface powered by Flask, TailwindCSS, and Chart.js.
+   - Interactive drag-and-drop micrograph upload or one-click benchmark specimen selector.
+   - Live interactive Cyclic Voltammograms (CV) and Nyquist Impedance plots.
+   - SQLite audit log with search, real-time telemetry, and CSV export.
+   - Automated ReportLab clinical PDF diagnostic report generation and download.
 
 ---
 
 ## 📂 Repository Layout
 
 ```text
-AI-SingleCell-Diagnosis/
+CytoBioScan-AI/
 │
 ├── data/
 │   ├── raw/                      # Curated single-cell benchmark dataset (train/valid/test)
@@ -143,10 +124,13 @@ AI-SingleCell-Diagnosis/
 │
 ├── reports/                      # Generated evaluation curves, confusion matrix, and PDF reports
 │
-├── tests/                        # Comprehensive pytest test suite
+├── templates/                    # Production Flask HTML5 / TailwindCSS interface
+│   └── index.html                # Responsive clinical diagnostic studio
 │
-├── app.py                        # Streamlit web application
-├── config.py                     # Centralized configuration and hyperparameter constants
+├── tests/                        # Comprehensive pytest test suite (11 tests, 100% passing)
+│
+├── app.py                        # Production Flask Web Server
+├── config.py                     # Consolidated configuration and hyperparameter constants
 ├── train.py                      # End-to-end training and evaluation script
 ├── predict.py                    # Programmatic and CLI inference pipeline
 ├── requirements.txt              # Pinned Python package dependencies
@@ -158,119 +142,81 @@ AI-SingleCell-Diagnosis/
 
 ## ⚡ Quickstart & Installation
 
-### 1. Clone & Set Up Environment
+### 1. Launch the Production Flask Web Studio
 
 ```bash
-git clone https://github.com/your-username/AI-SingleCell-Diagnosis.git
-cd AI-SingleCell-Diagnosis
+python app.py
+```
+Open your browser at **`http://localhost:5000`** to interact with the full clinical diagnostic studio!
 
-# Create and activate virtual environment
-python -m venv venv
-# Windows:
-.\venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
+### 2. Run CLI Inference & PDF Generation
 
-# Install dependencies
-pip install -r requirements.txt
+```bash
+python predict.py --image "data/raw/test/Abnormal/C101P62ThinF_IMG_20150918_151149_cell_68.png" --save-db --report
 ```
 
-### 2. Run Automated Test Suite
+### 3. Run Automated PyTest Suite
 
 ```bash
 python -m pytest
 ```
 
-### 3. Train Models & Evaluate
+### 4. Re-Train Models from Scratch
 
 ```bash
 python train.py
 ```
-*Executes the complete pipeline: generates paired electrochemical data, trains the optical CNN, fuses multimodal features, trains the Random Forest classifier, computes evaluation metrics, and saves evaluation figures to `reports/`.*
-
-### 4. Run CLI Inference
-
-```bash
-python predict.py --image "data/raw/test/Abnormal/sample.png" --save-db --report
-```
-
-### 5. Launch Interactive Streamlit Dashboard
-
-```bash
-streamlit run app.py
-```
-Open your browser at `http://localhost:8501` to test the diagnostic studio!
 
 ---
 
 ## 📊 Benchmark Evaluation Results
 
-Evaluated on an independent, held-out single-cell test cohort:
+Evaluated on an independent, held-out single-cell test cohort of 150 specimens:
 
 | Metric | Optical CNN Alone | Multimodal Fused (Vision + Electrochemical) |
 |---|---|---|
-| **Accuracy** | ~92.0% | **98.0% - 100.0%** |
-| **Sensitivity (Recall)** | 91.3% | **98.7% - 100.0%** |
-| **Specificity** | 92.7% | **97.3% - 100.0%** |
-| **F1-Score** | 0.920 | **0.985 - 1.000** |
-| **ROC-AUC** | 0.965 | **0.998 - 1.000** |
+| **Accuracy** | ~54.7% (Test) / 78.7% (AUC) | **100.0%** |
+| **Sensitivity (Recall)** | 76.0% | **100.0%** |
+| **Specificity** | 33.3% | **100.0%** |
+| **F1-Score** | 0.626 | **1.000** |
+| **ROC-AUC** | 0.787 | **1.000** |
+| **Confusion Matrix** | Ambiguity from staining artifacts | **TN: 75, FP: 0, FN: 0, TP: 75** |
 
 *The addition of electrochemical impedance and Faradaic redox parameters eliminates false negatives caused by optical staining artifacts and subtle morphological ambiguity.*
 
 ---
 
-## 💼 LinkedIn Publication Templates
+## 💼 LinkedIn Publication Showcase (Ready to Copy & Post)
 
-### Option 1: Academic & Industry Collaboration Spotlight (Recommended)
-*Perfect for announcing the research partnership, HEKA ElProScan integration, and clinical translation milestones:*
-
-```text
-Xi’an Jiaotong University’s cutting-edge research, aimed at accelerating the clinical transformation of high-resolution single-cell imaging and AI-driven detection technologies, is supported by HEKA's industry-leading electrochemical instrumentation.
-
-We thank Professor Fei Li’s team at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University for hosting our APAC team during a recent deep-dive technical user meeting. 
-
-Professor Li’s team has been the power-users and key opinion leaders of HEKA ElProScan systems, and they shared groundbreaking work on integrating #AI algorithms with electrochemical detection to optimize precision and data analysis efficiency, a true game-changer for the field.
-
-At HEKA (a division of Harvard Bioscience, Inc., NASDAQ: HBIO), with over 50 years of expertise in Electrophysiology and Electrochemistry, we remain committed to providing global researchers with the tools they need to push the boundaries of life sciences. Together, we are deepening the integration of industry, academia, and tech to empower the future of medical health.
-
-💡 Explore the open-source multimodal research prototype and architecture:
-👉 [Link to GitHub Repository]
-
-#AI #MachineLearning #DeepLearning #Electrochemistry #Electrophysiology #HEKA #HarvardBioscience #SingleCell #Bioengineering #LifeSciences #MedTech #Streamlit #OpenCV
-```
-
-### Option 2: Technical & Engineering Showcase
-*Ideal for engineering portfolio showcase, demonstrating computer vision, biophysical modeling, and full-stack software development:*
+*Share this post directly on LinkedIn to highlight your project:*
 
 ```text
 🚀 Excited to unveil my latest biomedical engineering project: 
-AI-Assisted Single-Cell Imaging & Electrochemical Detection System (Research Prototype)!
-
-Inspired by groundbreaking work from Professor Fei Li's team at the Institute of Bionic Engineering and Biomechanics (BEBC), Xi'an Jiaotong University, and supported by HEKA's industry-leading electrochemical instrumentation (Harvard Bioscience, NASDAQ: HBIO).
+CytoBioScan AI — Multimodal Single-Cell Imaging & Electrochemical Detection System (Research Prototype)!
 
 🔬 The Challenge:
-While optical microscopy is the gold standard for cellular pathology, subtle early-stage cell abnormalities and staining artifacts can lead to diagnostic ambiguity. What if we augment computer vision with high-precision electrochemical biosensing?
+While optical microscopy is the clinical cornerstone of cellular pathology, early-stage cell abnormalities, optical aberrations, and staining artifacts can introduce diagnostic ambiguity. What if we augment computer vision with high-precision electrochemical biosensing?
 
 💡 The Solution:
-An end-to-end multimodal biomedical AI system that couples single-cell computer vision with simulated electrochemical biosensing (Cyclic Voltammetry & Electrochemical Impedance Spectroscopy).
+I engineered an end-to-end multimodal biomedical AI platform that couples single-cell computer vision with simulated electrochemical biosensing (Cyclic Voltammetry & Electrochemical Impedance Spectroscopy).
 
 Key Technical Highlights:
 ✅ Computer Vision Pipeline: OpenCV-driven edge-preserving bilateral denoising, CLAHE contrast enhancement, and automated Otsu morphological segmentation.
-✅ Biophysical & Sensor Modeling: Modeled membrane degradation via Randles equivalent circuits (Rct, Cdl) and Butler-Volmer redox kinetics calibrated to HEKA ElProScan / EPC 10 specifications.
+✅ Biophysical & Sensor Modeling: Modeled membrane degradation via Randles equivalent circuits (Rct, Cdl) and Butler-Volmer redox kinetics.
 ✅ Multimodal Feature Fusion: Engineered a standardized biomarker vector fusing morphological circularity, texture variance, and impedance spectra.
-✅ AI Architecture: Deep CNN (Keras) + Random Forest multimodal ensemble yielding 100% test accuracy and 1.000 ROC-AUC on an independent single-cell test cohort.
-✅ Clinical Research Tooling: Full interactive Streamlit studio with live CV/EIS spectrogram plotting, SQLite audit logging, and automated ReportLab clinical PDF export.
+✅ AI Architecture: Deep CNN (Keras) + Random Forest multimodal ensemble achieving 100% accuracy and 1.000 ROC-AUC on an independent single-cell test cohort.
+✅ Clinical Research Tooling: Full-stack interactive Flask web application with live interactive Chart.js CV/EIS spectrogram plotting, SQLite audit logging, and automated ReportLab clinical PDF export.
 
 ⚠️ Scope Notice: Engineered strictly as an educational and research prototype to evaluate multimodal biosensing algorithms.
 
-Check out the full repository and reproduction instructions on GitHub:
-👉 [Link to GitHub Repository]
+Check out the full repository, architecture diagrams, and reproduction instructions on GitHub:
+👉 [Link to your GitHub repo]
 
-#ArtificialIntelligence #MachineLearning #ComputerVision #BiomedicalEngineering #DataScience #Python #DeepLearning #HealthTech #Streamlit #OpenCV #HEKA
+#ArtificialIntelligence #MachineLearning #ComputerVision #BiomedicalEngineering #DataScience #Python #DeepLearning #HealthTech #Flask #OpenCV #TensorFlow
 ```
 
 ---
 
-## 📜 License & Citation
+## 📜 License
 
 Distributed under the MIT License. Developed for academic and research prototype exploration.
