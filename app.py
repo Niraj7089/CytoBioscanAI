@@ -9,6 +9,16 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 import sys
+
+# Seamless dual-mode support: If launched via `streamlit run app.py`, delegate to Streamlit UI
+try:
+    import streamlit.runtime as st_runtime
+    if st_runtime.exists():
+        import streamlit_app
+        streamlit_app.main()
+        sys.exit(0)
+except ImportError:
+    pass
 import base64
 import io
 from pathlib import Path
