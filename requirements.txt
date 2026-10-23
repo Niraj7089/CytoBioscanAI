@@ -21,7 +21,6 @@ matplotlib>=3.8.0
 
 # Interactive Dashboard & Web Application
 flask>=3.0.0
-streamlit>=1.30.0
 
 # Medical / Diagnostic PDF Report Generation
 reportlab>=4.0.0
