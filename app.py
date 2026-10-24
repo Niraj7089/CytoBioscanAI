@@ -278,9 +278,9 @@ if __name__ == "__main__":
     t.start()
 
     print("=" * 70)
-    print("CytoBioScan AI — Multimodal Single-Cell Diagnostic System")
+    print("CytoBioScan AI -- Multimodal Single-Cell Diagnostic System")
     print("Production Flask Web Application is LIVE on BOTH ports:")
-    print("👉 http://localhost:8501 (Your existing browser tab)")
-    print("👉 http://localhost:5000 (Standard Flask port)")
-    print("======================================================================")
+    print(" * Primary URL (Your existing browser tab): http://localhost:8501")
+    print(" * Secondary URL (Standard Flask port):     http://localhost:5000")
+    print("=" * 70)
     run_simple("127.0.0.1", 8501, app, use_reloader=False)
