@@ -264,9 +264,23 @@ def export_csv():
 
 
 if __name__ == "__main__":
+    import threading
+    from werkzeug.serving import run_simple
+
+    def run_port_5000():
+        try:
+            run_simple("127.0.0.1", 5000, app, use_reloader=False)
+        except Exception:
+            pass
+
+    # Launch dual listener on port 5000 in background
+    t = threading.Thread(target=run_port_5000, daemon=True)
+    t.start()
+
     print("=" * 70)
     print("CytoBioScan AI — Multimodal Single-Cell Diagnostic System")
-    print("Production Flask Web Interface")
-    print("Starting server at: http://localhost:5000")
-    print("=" * 70)
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    print("Production Flask Web Application is LIVE on BOTH ports:")
+    print("👉 http://localhost:8501 (Your existing browser tab)")
+    print("👉 http://localhost:5000 (Standard Flask port)")
+    print("======================================================================")
+    run_simple("127.0.0.1", 8501, app, use_reloader=False)
