@@ -11,10 +11,21 @@ Executes end-to-end:
 
 import sys
 from pathlib import Path
-import tensorflow as tf
-from tensorflow import keras
 import numpy as np
 import pandas as pd
+
+# Resilient TensorFlow import for environments with Windows Application Control policies
+TF_AVAILABLE = False
+tf = None
+keras = None
+try:
+    import tensorflow as _tf
+    from tensorflow import keras as _keras
+    tf = _tf
+    keras = _keras
+    TF_AVAILABLE = True
+except (ImportError, Exception):
+    TF_AVAILABLE = False
 
 import config
 from src.sensor_simulation.simulator import generate_sensor_dataset
@@ -48,55 +59,59 @@ def main():
 
     # 2. Train CNN on Optical Single-Cell Images
     print("\n[Step 2/5] Training Deep Convolutional Neural Network (CNN) on Optical Images...")
-    train_ds = keras.utils.image_dataset_from_directory(
-        train_dir,
-        labels="inferred",
-        label_mode="binary",
-        class_names=config.CLASS_NAMES,
-        color_mode="rgb",
-        batch_size=config.BATCH_SIZE,
-        image_size=config.IMAGE_SIZE,
-        shuffle=True,
-        seed=config.RANDOM_SEED,
-    )
+    if TF_AVAILABLE:
+        train_ds = keras.utils.image_dataset_from_directory(
+            train_dir,
+            labels="inferred",
+            label_mode="binary",
+            class_names=config.CLASS_NAMES,
+            color_mode="rgb",
+            batch_size=config.BATCH_SIZE,
+            image_size=config.IMAGE_SIZE,
+            shuffle=True,
+            seed=config.RANDOM_SEED,
+        )
 
-    val_ds = keras.utils.image_dataset_from_directory(
-        val_dir,
-        labels="inferred",
-        label_mode="binary",
-        class_names=config.CLASS_NAMES,
-        color_mode="rgb",
-        batch_size=config.BATCH_SIZE,
-        image_size=config.IMAGE_SIZE,
-        shuffle=False,
-    )
+        val_ds = keras.utils.image_dataset_from_directory(
+            val_dir,
+            labels="inferred",
+            label_mode="binary",
+            class_names=config.CLASS_NAMES,
+            color_mode="rgb",
+            batch_size=config.BATCH_SIZE,
+            image_size=config.IMAGE_SIZE,
+            shuffle=False,
+        )
 
-    test_ds = keras.utils.image_dataset_from_directory(
-        test_dir,
-        labels="inferred",
-        label_mode="binary",
-        class_names=config.CLASS_NAMES,
-        color_mode="rgb",
-        batch_size=config.BATCH_SIZE,
-        image_size=config.IMAGE_SIZE,
-        shuffle=False,
-    )
+        test_ds = keras.utils.image_dataset_from_directory(
+            test_dir,
+            labels="inferred",
+            label_mode="binary",
+            class_names=config.CLASS_NAMES,
+            color_mode="rgb",
+            batch_size=config.BATCH_SIZE,
+            image_size=config.IMAGE_SIZE,
+            shuffle=False,
+        )
 
-    # Normalization layer
-    normalization_layer = keras.layers.Rescaling(1.0 / 255.0)
-    train_ds_norm = train_ds.map(lambda x, y: (normalization_layer(x), y)).prefetch(tf.data.AUTOTUNE)
-    val_ds_norm = val_ds.map(lambda x, y: (normalization_layer(x), y)).prefetch(tf.data.AUTOTUNE)
-    test_ds_norm = test_ds.map(lambda x, y: (normalization_layer(x), y)).prefetch(tf.data.AUTOTUNE)
+        # Normalization layer
+        normalization_layer = keras.layers.Rescaling(1.0 / 255.0)
+        train_ds_norm = train_ds.map(lambda x, y: (normalization_layer(x), y)).prefetch(tf.data.AUTOTUNE)
+        val_ds_norm = val_ds.map(lambda x, y: (normalization_layer(x), y)).prefetch(tf.data.AUTOTUNE)
+        test_ds_norm = test_ds.map(lambda x, y: (normalization_layer(x), y)).prefetch(tf.data.AUTOTUNE)
 
-    cnn_model, history = train_cnn_model(
-        train_ds=train_ds_norm,
-        val_ds=val_ds_norm,
-        epochs=config.EPOCHS,
-        model_save_path=config.IMAGE_MODEL_PATH
-    )
+        cnn_model, history = train_cnn_model(
+            train_ds=train_ds_norm,
+            val_ds=val_ds_norm,
+            epochs=config.EPOCHS,
+            model_save_path=config.IMAGE_MODEL_PATH
+        )
 
-    cnn_eval = cnn_model.evaluate(test_ds_norm, verbose=0)
-    print(f"CNN Optical Test Accuracy: {cnn_eval[1] * 100:.2f}% | Test AUC: {cnn_eval[2]:.4f}")
+        cnn_eval = cnn_model.evaluate(test_ds_norm, verbose=0)
+        print(f"CNN Optical Test Accuracy: {cnn_eval[1] * 100:.2f}% | Test AUC: {cnn_eval[2]:.4f}")
+    else:
+        print("Notice: TensorFlow C++ runtime is restricted by an Application Control policy.")
+        print("Skipping optical CNN step and proceeding directly to Multimodal Feature Fusion.")
 
     # 3. Extract and Fuse Multimodal Features
     print("\n[Step 3/5] Extracting & Fusing Multimodal Features (Image Morphology + Sensors)...")

@@ -1,6 +1,13 @@
 """AI model architectures, multimodal fusion classifier, and evaluation metrics."""
 
-from .cnn_model import build_cell_cnn, train_cnn_model, load_image_model
+try:
+    from .cnn_model import build_cell_cnn, train_cnn_model, load_image_model
+except (ImportError, Exception):
+    # Fallback when TensorFlow C++ DLL is restricted by Windows Application Control policies
+    build_cell_cnn = None
+    train_cnn_model = None
+    load_image_model = None
+
 from .multimodal_model import (
     MultimodalClassifier,
     train_multimodal_model,

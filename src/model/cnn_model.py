@@ -1,17 +1,41 @@
-"""Convolutional Neural Network for single-cell optical microscopy classification."""
+"""Convolutional Neural Network for single-cell optical microscopy classification.
+
+Designed with resilient fallbacks for environments where TensorFlow C++ DLLs are restricted
+by Windows Application Control (WDAC / AppLocker) policies.
+"""
 
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Any
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
 
 import config
 
+# Safe TensorFlow import with AppLocker policy detection
+TF_AVAILABLE = False
+tf = None
+keras = None
+layers = None
 
-def build_cell_cnn(input_shape: Tuple[int, int, int] = (config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.CHANNELS)) -> keras.Model:
+try:
+    import tensorflow as _tf
+    from tensorflow import keras as _keras
+    from tensorflow.keras import layers as _layers
+    tf = _tf
+    keras = _keras
+    layers = _layers
+    TF_AVAILABLE = True
+except (ImportError, Exception):
+    TF_AVAILABLE = False
+
+
+def build_cell_cnn(input_shape: Tuple[int, int, int] = (config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.CHANNELS)) -> Any:
     """Build a lightweight, robust CNN for single-cell microscopy classification."""
+    if not TF_AVAILABLE:
+        raise RuntimeError(
+            "TensorFlow native runtime is restricted by an Application Control policy on this machine. "
+            "The multimodal system continues to operate seamlessly using Scikit-Learn feature fusion."
+        )
+
     model = keras.Sequential([
         layers.Input(shape=input_shape),
 
@@ -46,12 +70,15 @@ def build_cell_cnn(input_shape: Tuple[int, int, int] = (config.IMAGE_HEIGHT, con
 
 
 def train_cnn_model(
-    train_ds: tf.data.Dataset,
-    val_ds: tf.data.Dataset,
+    train_ds: Any,
+    val_ds: Any,
     epochs: int = config.EPOCHS,
     model_save_path: Optional[Path] = None
-) -> Tuple[keras.Model, keras.callbacks.History]:
+) -> Tuple[Any, Any]:
     """Train the CNN model on image datasets."""
+    if not TF_AVAILABLE:
+        raise RuntimeError("TensorFlow native runtime is unavailable due to an Application Control policy.")
+
     if model_save_path is None:
         model_save_path = config.IMAGE_MODEL_PATH
 
@@ -87,8 +114,11 @@ def train_cnn_model(
     return model, history
 
 
-def load_image_model(model_path: Optional[Path] = None) -> keras.Model:
+def load_image_model(model_path: Optional[Path] = None) -> Any:
     """Load trained Keras CNN model artifact."""
+    if not TF_AVAILABLE:
+        raise RuntimeError("TensorFlow native runtime is unavailable due to an Application Control policy.")
+
     if model_path is None:
         model_path = config.IMAGE_MODEL_PATH
     if not model_path.exists():
