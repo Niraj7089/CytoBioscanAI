@@ -146,10 +146,35 @@ def analyze():
         mask, primary_contour, overlay = segment_cell(enhanced_uint8)
         img_features = extract_image_features(enhanced_uint8, mask=mask)
 
-        # 4. Electrochemical Sensor Simulation (CV & EIS)
-        cv_data = simulate_cyclic_voltammetry(cell_type=cell_condition, noise_level=noise_level)
-        eis_data = simulate_impedance_spectroscopy(cell_type=cell_condition, noise_level=noise_level)
-        sensor_features = extract_sensor_features(cv_data, eis_data)
+        # 4. Electrochemical Sensor Simulation (CV & EIS) or CSV Upload
+        sensor_features = None
+        cv_data = None
+        eis_data = None
+
+        if "sensor_file" in request.files and request.files["sensor_file"].filename != "":
+            try:
+                sensor_df = pd.read_csv(request.files["sensor_file"])
+                if "cell_id" in sensor_df.columns and sample_id in sensor_df["cell_id"].values:
+                    matched_row = sensor_df[sensor_df["cell_id"] == sample_id].iloc[0]
+                else:
+                    matched_row = sensor_df.iloc[0]
+
+                extracted = {}
+                for col in config.SENSOR_FEATURE_COLS:
+                    if col in matched_row and pd.notnull(matched_row[col]):
+                        extracted[col] = float(matched_row[col])
+                if len(extracted) == len(config.SENSOR_FEATURE_COLS):
+                    sensor_features = extracted
+            except Exception as ex:
+                app.logger.warning(f"Failed to read custom sensor CSV: {ex}")
+
+        if sensor_features is None:
+            cv_data = simulate_cyclic_voltammetry(cell_type=cell_condition, noise_level=noise_level)
+            eis_data = simulate_impedance_spectroscopy(cell_type=cell_condition, noise_level=noise_level)
+            sensor_features = extract_sensor_features(cv_data, eis_data)
+        else:
+            cv_data = simulate_cyclic_voltammetry(cell_type=cell_condition, noise_level=noise_level)
+            eis_data = simulate_impedance_spectroscopy(cell_type=cell_condition, noise_level=noise_level)
 
         # 5. Multimodal Feature Fusion & Inference
         _, scaled_vec = prepare_single_sample_features(img_features, sensor_features)
@@ -237,6 +262,16 @@ def clear_audit_history():
     """Clear all records from audit database."""
     clear_history()
     return jsonify({"status": "cleared"})
+
+
+@app.route("/reports/<path:filename>", methods=["GET"])
+def serve_report_file(filename):
+    """Serve evaluation static plots (confusion matrix, ROC curve)."""
+    safe_filename = Path(filename).name
+    target = (config.REPORTS_DIR / safe_filename).resolve()
+    if not target.exists() or not str(target).startswith(str(config.REPORTS_DIR)):
+        return "File not found", 404
+    return send_file(target)
 
 
 @app.route("/api/download-report/<filename>", methods=["GET"])

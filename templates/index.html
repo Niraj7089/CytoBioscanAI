@@ -1,447 +1,483 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50">
+<html lang="en" class="h-full bg-[#f8f9fa]">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CytoBioScan AI | Multimodal Single-Cell Diagnostic System</title>
+    <title>AI Single-Cell Diagnosis Prototype</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0f7ff',
-                            100: '#e0effe',
-                            500: '#0284c7',
-                            600: '#0369a1',
-                            700: '#075985',
-                            800: '#0c4a6e',
-                            900: '#0f172a',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome & Google Fonts -->
+    <!-- FontAwesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Chart.js CDN -->
+    <!-- Chart.js 4 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .main-header {
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: #0D3B66;
+            margin-bottom: 0.2rem;
         }
-        .pulse-healthy {
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-            animation: pulse-green 2s infinite;
+        .sub-header {
+            font-size: 1.05rem;
+            color: #4A5568;
+            margin-bottom: 1rem;
         }
-        .pulse-abnormal {
-            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-            animation: pulse-red 2s infinite;
+        .disclaimer-box {
+            background-color: #FFF9E6;
+            border-left: 5px solid #E28743;
+            padding: 0.8rem 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #7A4B00;
+            margin-bottom: 1.2rem;
         }
-        @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        .metric-card {
+            background-color: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 1.2rem;
+            text-align: center;
         }
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        .status-healthy {
+            background-color: #E8F8F5;
+            color: #145A32;
+            padding: 0.4rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 1.35rem;
+            display: inline-block;
+            border: 1px solid #A2D9CE;
+        }
+        .status-abnormal {
+            background-color: #FDEDEC;
+            color: #922B21;
+            padding: 0.4rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 1.35rem;
+            display: inline-block;
+            border: 1px solid #F5B7B1;
+        }
+        /* Streamlit radio button style */
+        .st-radio input[type="radio"] {
+            accent-color: #ff4b4b;
         }
     </style>
 </head>
-<body class="h-full flex flex-col text-slate-800 antialiased">
+<body class="h-full flex text-slate-800 antialiased">
 
-    <!-- Top Navigation Header -->
-    <header class="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-50 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Brand / Logo -->
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
-                        <i class="fa-solid fa-microscope text-lg"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-xl font-bold tracking-tight text-white">CytoBioScan <span class="text-cyan-400">AI</span></span>
-                            <span class="px-2 py-0.5 text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full">PROTOTYPE</span>
-                        </div>
-                        <p class="text-xs text-slate-400 hidden sm:block">Multimodal Single-Cell Imaging & Electrochemical Biosensing Platform</p>
-                    </div>
+    <!-- ==================== STREAMLIT-STYLE LEFT SIDEBAR ==================== -->
+    <aside class="w-72 bg-[#f0f2f6] border-r border-slate-200 p-5 flex flex-col justify-between shrink-0 min-h-screen">
+        <div class="space-y-6">
+            <!-- Icon -->
+            <div class="flex items-center space-x-3">
+                <img src="https://img.icons8.com/fluency/96/microscope.png" alt="Microscope" class="w-12 h-12">
+                <div>
+                    <h1 class="text-base font-bold text-slate-900 leading-tight">CytoBioScan AI</h1>
+                    <span class="text-xs text-slate-500 font-medium">Research Prototype</span>
                 </div>
+            </div>
 
-                <!-- Navigation Tabs -->
-                <nav class="flex space-x-1 sm:space-x-2">
-                    <button onclick="switchTab('studio')" id="tab-btn-studio" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all text-white bg-slate-800 shadow-sm border border-slate-700">
-                        <i class="fa-solid fa-flask-vial mr-2 text-cyan-400"></i>Diagnostic Studio
-                    </button>
-                    <button onclick="switchTab('history')" id="tab-btn-history" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
-                        <i class="fa-solid fa-clock-rotate-left mr-2"></i>Audit Log
-                    </button>
-                    <button onclick="switchTab('specs')" id="tab-btn-specs" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
-                        <i class="fa-solid fa-network-wired mr-2"></i>Architecture
-                    </button>
-                </nav>
+            <!-- Navigation Title -->
+            <div class="pt-2">
+                <h2 class="text-lg font-bold text-slate-900 mb-3">Navigation</h2>
+                <div class="space-y-2">
+                    <label class="flex items-center space-x-3 p-2 rounded-lg cursor-pointer hover:bg-slate-200/60 transition" onclick="switchModule('analysis')">
+                        <input type="radio" name="sidebar-module" id="radio-analysis" checked class="w-4 h-4 text-red-500 focus:ring-red-500 accent-[#ff4b4b]">
+                        <span class="text-sm font-medium text-slate-800">Single-Cell Live Analysis</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-2 rounded-lg cursor-pointer hover:bg-slate-200/60 transition" onclick="switchModule('history')">
+                        <input type="radio" name="sidebar-module" id="radio-history" class="w-4 h-4 text-red-500 focus:ring-red-500 accent-[#ff4b4b]">
+                        <span class="text-sm font-medium text-slate-800">Audit Log & History</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-2 rounded-lg cursor-pointer hover:bg-slate-200/60 transition" onclick="switchModule('specs')">
+                        <input type="radio" name="sidebar-module" id="radio-specs" class="w-4 h-4 text-red-500 focus:ring-red-500 accent-[#ff4b4b]">
+                        <span class="text-sm font-medium text-slate-800">Architecture & Diagnostics</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Sidebar Info Divider -->
+            <hr class="border-slate-300">
+            <div class="space-y-2 text-xs text-slate-600">
+                <p class="font-bold text-slate-700">🔬 System Specifications</p>
+                <p>• <strong>Imaging:</strong> 128×128 RGB Microscopy</p>
+                <p>• <strong>Sensor:</strong> 3-Electrode CV & EIS</p>
+                <p>• <strong>AI Engine:</strong> Multimodal Random Forest</p>
+                <p>• <strong>Audit Log:</strong> Persistent SQLite</p>
             </div>
         </div>
-    </header>
 
-    <!-- Research Prototype Advisory Banner -->
-    <div class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5">
-        <div class="max-w-7xl mx-auto flex items-center justify-between text-xs sm:text-sm text-amber-800 font-medium">
-            <div class="flex items-center space-x-2">
-                <i class="fa-solid fa-triangle-exclamation text-amber-600 text-base"></i>
-                <span><strong>RESEARCH PROTOTYPE NOTICE:</strong> Developed strictly for educational and algorithmic research. Not a cleared clinical diagnostic device.</span>
-            </div>
-            <span class="hidden md:inline-block px-2.5 py-0.5 bg-amber-100 rounded text-amber-900 text-xs font-semibold">v2.4 Production UI</span>
+        <div class="text-[11px] text-slate-500 pt-6 border-t border-slate-300">
+            Flask Production Edition v2.4<br>
+            Runs on ports 8501 & 5000
         </div>
-    </div>
+    </aside>
 
-    <!-- Main Content Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- ==================== MAIN CONTENT AREA ==================== -->
+    <main class="flex-1 overflow-y-auto px-6 sm:px-10 py-6 max-w-6xl">
 
-        <!-- ==================== VIEW 1: DIAGNOSTIC STUDIO ==================== -->
-        <section id="view-studio" class="space-y-6">
-            
-            <!-- Input Grid (Left: Micrograph, Right: Electrochemical Parameters) -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Header -->
+        <div class="main-header">🔬 AI-Assisted Single-Cell Diagnostic System</div>
+        <div class="sub-header">Multimodal Biosensing Platform Integrating Optical Microscopy & Electrochemical Impedance Detection</div>
 
-                <!-- Left Column: Optical Micrograph (Col 6) -->
-                <div class="lg:col-span-6 glass-card rounded-2xl p-5 shadow-sm space-y-4">
-                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                        <div class="flex items-center space-x-2.5">
-                            <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">1</span>
-                            <h2 class="font-bold text-slate-900 text-base">Optical Microscopy Input</h2>
-                        </div>
-                        <span class="text-xs text-slate-500 font-medium">Brightfield / Single Cell</span>
-                    </div>
+        <!-- Regulatory Notice Banner -->
+        <div class="disclaimer-box">
+            <strong>⚠️ RESEARCH PROTOTYPE NOTICE:</strong> This system is developed strictly for research, educational, and computational evaluation purposes. It is not an FDA-cleared medical device and must not be used as a clinical diagnostic tool or to guide medical treatments.
+        </div>
 
-                    <!-- Quick Benchmark Selectors -->
-                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200/60">
-                        <p class="text-xs font-semibold text-slate-600 mb-2">⚡ Quick-Load Benchmark Library Specimens:</p>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="loadPresetSample('Healthy')" class="flex items-center justify-center space-x-2 px-3 py-2 bg-white hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 transition">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                <span>Benchmark Healthy Cell</span>
-                            </button>
-                            <button onclick="loadPresetSample('Abnormal')" class="flex items-center justify-center space-x-2 px-3 py-2 bg-white hover:bg-rose-50 hover:border-rose-300 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 transition">
-                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                                <span>Benchmark Abnormal Cell</span>
-                            </button>
-                        </div>
-                    </div>
+        <!-- ==================== MODULE 1: SINGLE-CELL LIVE ANALYSIS ==================== -->
+        <div id="module-analysis" class="space-y-6">
+            <h3 class="text-xl font-bold text-slate-900">Single-Cell Specimen Analysis</h3>
 
-                    <!-- File Dropzone -->
-                    <div id="dropzone" class="border-2 border-dashed border-slate-300 hover:border-cyan-500 rounded-xl p-6 text-center cursor-pointer transition bg-slate-50/50 relative overflow-hidden group">
-                        <input type="file" id="cell-image-input" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="handleFileSelect(event)">
-                        
-                        <div id="dropzone-prompt" class="space-y-2">
-                            <div class="w-12 h-12 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl group-hover:scale-110 transition">
-                                <i class="fa-solid fa-cloud-arrow-up"></i>
-                            </div>
-                            <p class="text-sm font-semibold text-slate-700">Click to upload or drag & drop</p>
-                            <p class="text-xs text-slate-400">Single erythrocyte PNG, JPG or TIFF (128×128 recommended)</p>
-                        </div>
+            <!-- Two-Column Inputs: Optical vs Sensor -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                        <div id="preview-container" class="hidden flex flex-col items-center">
-                            <img id="image-preview" src="" alt="Cell Preview" class="w-32 h-32 object-cover rounded-xl border border-slate-200 shadow-sm">
-                            <span id="preview-filename" class="mt-2 text-xs font-medium text-slate-600 truncate max-w-xs"></span>
+                <!-- Left Column: 1. Optical Microscopy Input -->
+                <div class="space-y-4">
+                    <h4 class="text-base font-bold text-slate-900 pb-1 border-b border-slate-200">1. Optical Microscopy Input</h4>
+
+                    <!-- Radio: Image Input Source -->
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-slate-700">Image Input Source:</label>
+                        <div class="flex items-center space-x-6 pt-1">
+                            <label class="flex items-center space-x-2 text-sm text-slate-800 cursor-pointer">
+                                <input type="radio" name="image-source" value="library" checked onchange="toggleImageSource('library')" class="accent-[#ff4b4b]">
+                                <span>Choose from Test Library</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm text-slate-800 cursor-pointer">
+                                <input type="radio" name="image-source" value="upload" onchange="toggleImageSource('upload')" class="accent-[#ff4b4b]">
+                                <span>Upload Image File (.png, .jpg)</span>
+                            </label>
                         </div>
                     </div>
-                </div>
 
-                <!-- Right Column: Electrochemical Sensor Setup (Col 6) -->
-                <div class="lg:col-span-6 glass-card rounded-2xl p-5 shadow-sm space-y-4">
-                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                        <div class="flex items-center space-x-2.5">
-                            <span class="w-7 h-7 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center font-bold text-sm">2</span>
-                            <h2 class="font-bold text-slate-900 text-base">Electrochemical Biosensing</h2>
-                        </div>
-                        <span class="text-xs text-slate-500 font-medium">CV & EIS Randles Simulation</span>
-                    </div>
-
-                    <!-- Sensor Simulation Controls -->
-                    <div class="space-y-3.5">
+                    <!-- Mode A: Choose from Library -->
+                    <div id="box-image-library" class="space-y-3 pt-2">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Simulated Cell Membrane Condition:</label>
-                            <select id="sensor-cell-condition" class="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                                <option value="Healthy">Healthy (Intact Dielectric Membrane | High Rct ~1500 Ω)</option>
-                                <option value="Abnormal">Abnormal (Compromised Permeable Membrane | Low Rct ~600 Ω)</option>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Select Target Class:</label>
+                            <select id="select-target-class" onchange="onClassChange()" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <option value="Healthy">Healthy (Uninfected RBC)</option>
+                                <option value="Abnormal">Abnormal (Parasitized RBC)</option>
                             </select>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <div class="flex justify-between text-xs font-semibold text-slate-700 mb-1">
-                                    <span>Measurement Noise:</span>
-                                    <span id="noise-val" class="text-cyan-600">4.0%</span>
-                                </div>
-                                <input type="range" id="noise-slider" min="1.0" max="15.0" step="0.5" value="4.0" class="w-full accent-cyan-600 cursor-pointer" oninput="document.getElementById('noise-val').innerText = this.value + '%'">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Potential Scan Range:</label>
-                                <select class="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800" disabled>
-                                    <option>-0.40 V to +0.80 V (0.1 V/s)</option>
-                                </select>
-                            </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Select Benchmark Cell Sample:</label>
+                            <select id="select-sample-file" onchange="onSampleChange()" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 font-mono text-xs">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Mode B: Upload Image -->
+                    <div id="box-image-upload" class="hidden space-y-2 pt-2">
+                        <label class="block text-xs font-bold text-slate-700">Upload Single-Cell Micrograph</label>
+                        <div class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-lg p-5 text-center cursor-pointer bg-white relative">
+                            <input type="file" id="upload-cell-file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFileUpload(event)">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-2"></i>
+                            <p class="text-xs text-slate-600 font-semibold">Drag and drop file here</p>
+                            <p class="text-[11px] text-slate-400">Limit 200MB per file • PNG, JPG, JPEG</p>
+                        </div>
+                    </div>
+
+                    <!-- Selected Image Preview -->
+                    <div class="pt-2">
+                        <p class="text-xs font-semibold text-slate-500 mb-1.5">Micrograph Specimen Preview:</p>
+                        <div class="w-28 h-28 bg-white border border-slate-300 rounded-md overflow-hidden flex items-center justify-center shadow-sm">
+                            <img id="input-preview-img" src="" alt="Preview" class="w-full h-full object-cover">
+                        </div>
+                        <p id="input-preview-label" class="text-xs text-slate-600 font-mono mt-1 truncate max-w-xs"></p>
+                    </div>
+                </div>
+
+                <!-- Right Column: 2. Electrochemical Sensor Input -->
+                <div class="space-y-4">
+                    <h4 class="text-base font-bold text-slate-900 pb-1 border-b border-slate-200">2. Electrochemical Sensor Input</h4>
+
+                    <!-- Radio: Sensor Data Source -->
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-slate-700">Sensor Data Source:</label>
+                        <div class="flex items-center space-x-6 pt-1">
+                            <label class="flex items-center space-x-2 text-sm text-slate-800 cursor-pointer">
+                                <input type="radio" name="sensor-source" value="simulate" checked onchange="toggleSensorSource('simulate')" class="accent-[#ff4b4b]">
+                                <span>Simulate Realistic Electrochemical Signal</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm text-slate-800 cursor-pointer">
+                                <input type="radio" name="sensor-source" value="upload-csv" onchange="toggleSensorSource('upload-csv')" class="accent-[#ff4b4b]">
+                                <span>Upload Custom Sensor CSV</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Mode A: Simulate Controls -->
+                    <div id="box-sensor-simulate" class="space-y-3 pt-2">
+                        <!-- Info Box -->
+                        <div class="bg-[#d1ecf1] border-l-4 border-[#0c5460] p-3 rounded text-xs text-[#0c5460] font-medium">
+                            Simulating Cyclic Voltammetry (CV) &amp; Impedance Spectroscopy (EIS) across gold microelectrodes.
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Analyst Observations / Specimen Notes (Optional):</label>
-                            <input type="text" id="analyst-notes" placeholder="E.g., In-vitro screening batch #04, incubated at 37°C" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Simulate Cell Membrane Condition:</label>
+                            <select id="select-membrane-condition" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+                                <option value="Healthy">Healthy (Intact Membrane)</option>
+                                <option value="Abnormal">Abnormal (Compromised Membrane)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span>Electrochemical Noise Level (%):</span>
+                                <span id="noise-display" class="text-red-500 font-mono">4.0%</span>
+                            </div>
+                            <input type="range" id="slider-noise" min="1.0" max="15.0" step="0.5" value="4.0" class="w-full accent-[#ff4b4b] cursor-pointer" oninput="document.getElementById('noise-display').innerText = this.value + '%'">
                         </div>
                     </div>
 
-                    <!-- Action Button -->
-                    <button id="btn-analyze" onclick="runAnalysis()" class="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-600/20 flex items-center justify-center space-x-2 transition duration-200 cursor-pointer">
-                        <i class="fa-solid fa-brain-circuit text-lg"></i>
-                        <span>Execute Multimodal AI Diagnostic Analysis</span>
-                    </button>
+                    <!-- Mode B: Upload Sensor CSV -->
+                    <div id="box-sensor-csv" class="hidden space-y-2 pt-2">
+                        <label class="block text-xs font-bold text-slate-700">Upload Sensor Measurement CSV</label>
+                        <div class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-lg p-5 text-center cursor-pointer bg-white relative">
+                            <input type="file" id="upload-sensor-file" accept=".csv" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleCsvUpload(event)">
+                            <i class="fa-solid fa-file-csv text-2xl text-emerald-600 mb-2"></i>
+                            <p class="text-xs text-slate-600 font-semibold">Drag and drop CSV here</p>
+                            <p id="sensor-csv-name" class="text-[11px] text-slate-400">CSV with peak_anodic_current, rct, etc.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Loader State -->
-            <div id="analysis-loader" class="hidden glass-card rounded-2xl p-8 text-center space-y-3">
-                <div class="inline-block animate-spin text-cyan-600 text-3xl">
-                    <i class="fa-solid fa-circle-notch"></i>
-                </div>
-                <p class="font-bold text-slate-800 text-sm">Processing Optical Micrograph & Simulating Biosensor Impedance...</p>
-                <p class="text-xs text-slate-500">Executing Deep CNN feature mapping + Multimodal Random Forest ensemble classification.</p>
+            <!-- Bottom Notes Input -->
+            <hr class="border-slate-300 my-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Analyst Observations / Study Notes:</label>
+                <input type="text" id="input-notes" placeholder="E.g., In-vitro assay batch #4, 37°C incubation." class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
             </div>
 
-            <!-- ==================== RESULTS DASHBOARD ==================== -->
-            <div id="results-panel" class="hidden space-y-6">
+            <!-- Big Action Button -->
+            <button onclick="executeAnalysis()" id="btn-run-analysis" class="w-full py-3 px-4 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white font-bold text-base rounded-md shadow transition flex items-center justify-center space-x-2">
+                <span>🚀 Run Multimodal AI Analysis</span>
+            </button>
 
-                <!-- Primary Metric Scorecards -->
+            <!-- Loading Spinner -->
+            <div id="loading-box" class="hidden text-center py-6 space-y-2">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-red-500"></i>
+                <p class="text-sm font-semibold text-slate-700">Processing optical micrograph, segmenting cell, and performing multimodal AI inference...</p>
+            </div>
+
+            <!-- ==================== STREAMLIT-STYLE RESULTS ==================== -->
+            <div id="results-box" class="hidden space-y-6 pt-4">
+
+                <!-- Success Alert -->
+                <div id="alert-success" class="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm px-4 py-3 rounded font-medium">
+                    Analysis complete for sample <strong id="res-sample-name"></strong> (Audit Record #<span id="res-record-id"></span>)
+                </div>
+
+                <!-- 3 Top Metric Columns -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-
-                    <!-- Scorecard 1: Classification Verdict -->
-                    <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col justify-between">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            <span>Multimodal Classification</span>
-                            <i class="fa-solid fa-dna text-slate-400"></i>
-                        </div>
-                        <div class="my-3 text-center">
-                            <span id="res-badge" class="px-5 py-2 rounded-xl text-lg font-black tracking-wide inline-block">--</span>
-                        </div>
-                        <p class="text-xs text-slate-500 text-center">Morphological & Electrochemical Consensus</p>
+                    <!-- Column 1: Classification -->
+                    <div class="metric-card">
+                        <div class="text-xs font-semibold text-slate-500 mb-2">Multimodal Classification</div>
+                        <div id="badge-verdict" class="status-healthy">HEALTHY</div>
+                        <div class="text-xs text-slate-400 mt-2">Morphological + Electrochemical Consensus</div>
                     </div>
 
-                    <!-- Scorecard 2: Confidence Gauge -->
-                    <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col justify-between">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            <span>Model Confidence</span>
-                            <i class="fa-solid fa-gauge-high text-slate-400"></i>
-                        </div>
-                        <div class="my-2 text-center">
-                            <span id="res-confidence" class="text-3xl font-black text-slate-900 tracking-tight">--%</span>
-                        </div>
-                        <p id="res-posterior" class="text-xs text-slate-500 text-center">Posterior Model Probability</p>
+                    <!-- Column 2: Confidence -->
+                    <div class="metric-card">
+                        <div class="text-xs font-semibold text-slate-500 mb-1">Model Confidence</div>
+                        <div id="text-confidence" class="text-3xl font-bold text-[#0D3B66]">--%</div>
+                        <div id="text-posterior" class="text-xs text-slate-400 mt-1">Posterior Probability: --</div>
                     </div>
 
-                    <!-- Scorecard 3: Risk Score -->
-                    <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col justify-between">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            <span>Research Risk Score</span>
-                            <i class="fa-solid fa-shield-virus text-slate-400"></i>
-                        </div>
-                        <div class="my-2 text-center">
-                            <span id="res-risk-score" class="text-3xl font-black text-slate-900 tracking-tight">--</span>
-                            <span class="text-xs text-slate-400">/ 1.00</span>
-                        </div>
-                        <p id="res-risk-level" class="text-xs font-semibold text-center text-slate-500">Biophysical Atypia Level</p>
+                    <!-- Column 3: Risk Score -->
+                    <div class="metric-card">
+                        <div class="text-xs font-semibold text-slate-500 mb-1">Research Risk Score</div>
+                        <div class="text-3xl font-bold text-[#145A32]" id="text-risk-score">-- <small class="text-xs text-slate-500 font-normal">/ 1.00</small></div>
+                        <div id="text-risk-desc" class="text-xs text-slate-500 mt-1 font-semibold">Low Anomaly</div>
                     </div>
                 </div>
 
-                <!-- Visual Processing & Sensor Charts Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <hr class="border-slate-300">
 
-                    <!-- Visual Analysis Triad (Col 6) -->
-                    <div class="lg:col-span-6 glass-card rounded-2xl p-5 shadow-sm space-y-4">
-                        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                            <h3 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
-                                <i class="fa-solid fa-image text-blue-600"></i>
-                                <span>Image Processing & Segmentation Triad</span>
-                            </h3>
-                            <span class="text-xs text-slate-400 font-mono">128×128 RGB</span>
+                <!-- Tabs: Image Processing vs Electrochemical Signatures -->
+                <div class="border-b border-slate-200">
+                    <nav class="flex space-x-6 text-sm font-bold">
+                        <button onclick="switchResultTab('tab-img')" id="btn-tab-img" class="pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2">
+                            <span>🖼️ Image Processing &amp; Segmentation</span>
+                        </button>
+                        <button onclick="switchResultTab('tab-sensor')" id="btn-tab-sensor" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2">
+                            <span>⚡ Electrochemical Signatures</span>
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab 1: Image Processing & Segmentation (3 columns) -->
+                <div id="content-tab-img" class="space-y-4 pt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="space-y-1 text-center">
+                            <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
+                                <img id="res-img-raw" src="" class="w-full aspect-square object-cover rounded">
+                            </div>
+                            <span class="text-xs font-medium text-slate-600">Raw Microscopic Cell</span>
                         </div>
-
-                        <div class="grid grid-cols-3 gap-3">
-                            <div class="space-y-1.5 text-center">
-                                <div class="bg-slate-100 rounded-xl overflow-hidden border border-slate-200 aspect-square flex items-center justify-center">
-                                    <img id="vis-raw" src="" class="w-full h-full object-cover">
-                                </div>
-                                <span class="text-xs font-semibold text-slate-600">Raw Micrograph</span>
+                        <div class="space-y-1 text-center">
+                            <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
+                                <img id="res-img-enhanced" src="" class="w-full aspect-square object-cover rounded">
                             </div>
-                            <div class="space-y-1.5 text-center">
-                                <div class="bg-slate-100 rounded-xl overflow-hidden border border-slate-200 aspect-square flex items-center justify-center">
-                                    <img id="vis-enhanced" src="" class="w-full h-full object-cover">
-                                </div>
-                                <span class="text-xs font-semibold text-slate-600">CLAHE Contrast</span>
-                            </div>
-                            <div class="space-y-1.5 text-center">
-                                <div class="bg-slate-100 rounded-xl overflow-hidden border border-slate-200 aspect-square flex items-center justify-center">
-                                    <img id="vis-overlay" src="" class="w-full h-full object-cover">
-                                </div>
-                                <span class="text-xs font-semibold text-cyan-700">Otsu Boundary</span>
-                            </div>
+                            <span class="text-xs font-medium text-slate-600">Contrast Enhanced (CLAHE)</span>
                         </div>
-
-                        <!-- Quantitative Morphological Table -->
-                        <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="w-full text-left text-xs">
-                                <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-                                    <tr>
-                                        <th class="py-2 px-3">Morphological Biomarker</th>
-                                        <th class="py-2 px-3 text-right">Extracted Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="morpho-table-body" class="divide-y divide-slate-100 text-slate-700">
-                                    <!-- Populated dynamically -->
-                                </tbody>
-                            </table>
+                        <div class="space-y-1 text-center">
+                            <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
+                                <img id="res-img-overlay" src="" class="w-full aspect-square object-cover rounded">
+                            </div>
+                            <span class="text-xs font-medium text-slate-600">Segmented Cell &amp; Boundary Outline</span>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Sensor Signatures & Spectroscopy (Col 6) -->
-                    <div class="lg:col-span-6 glass-card rounded-2xl p-5 shadow-sm space-y-4">
-                        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                            <h3 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
-                                <i class="fa-solid fa-chart-line text-cyan-600"></i>
-                                <span>Electrochemical Signatures (CV & EIS)</span>
-                            </h3>
-                            <span class="text-xs text-slate-400 font-mono">Simulated Potentiostat</span>
-                        </div>
-
-                        <!-- Chart 1: Cyclic Voltammogram -->
-                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                            <p class="text-xs font-bold text-slate-700 mb-1">Cyclic Voltammogram (Faradaic Current vs Potential)</p>
-                            <div class="h-44 w-full">
+                <!-- Tab 2: Electrochemical Signatures (Dual-panel charts) -->
+                <div id="content-tab-sensor" class="hidden space-y-4 pt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                            <h5 class="text-xs font-bold text-slate-800 text-center mb-2">Cyclic Voltammogram (CV)</h5>
+                            <div class="h-56">
                                 <canvas id="chart-cv"></canvas>
                             </div>
                         </div>
-
-                        <!-- Chart 2: Nyquist Impedance Plot -->
-                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                            <p class="text-xs font-bold text-slate-700 mb-1">Nyquist Spectrum (-Z'' vs Z' across 1 Hz - 100 kHz)</p>
-                            <div class="h-44 w-full">
+                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                            <h5 class="text-xs font-bold text-slate-800 text-center mb-2">EIS Nyquist Spectrum (-Z'' vs Z')</h5>
+                            <div class="h-56">
                                 <canvas id="chart-eis"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Export Bar -->
-                <div class="glass-card rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div class="flex items-center space-x-3 text-xs text-slate-600">
-                        <i class="fa-solid fa-shield-halved text-cyan-600 text-lg"></i>
-                        <span>Audit record persisted in SQLite database. Complete diagnostic parameter set verified.</span>
+                <!-- Quantitative Breakdown Tables (2 columns side-by-side) -->
+                <div class="pt-4 space-y-2">
+                    <h4 class="text-sm font-bold text-slate-900">Quantitative Multimodal Biomarkers</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                        <!-- Left Table: Morphological & Texture -->
+                        <div class="bg-white border border-slate-300 rounded overflow-hidden shadow-sm">
+                            <div class="bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 border-b border-slate-300">
+                                Morphological &amp; Texture Descriptors
+                            </div>
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                    <tr><th class="py-1.5 px-3">Biomarker</th><th class="py-1.5 px-3 text-right">Value</th></tr>
+                                </thead>
+                                <tbody id="table-img-metrics" class="divide-y divide-slate-100 text-slate-700 font-mono">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Right Table: Electrochemical Sensor -->
+                        <div class="bg-white border border-slate-300 rounded overflow-hidden shadow-sm">
+                            <div class="bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 border-b border-slate-300">
+                                Electrochemical Sensor Descriptors
+                            </div>
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                    <tr><th class="py-1.5 px-3">Biomarker</th><th class="py-1.5 px-3 text-right">Value</th></tr>
+                                </thead>
+                                <tbody id="table-sensor-metrics" class="divide-y divide-slate-100 text-slate-700 font-mono">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <a id="btn-download-pdf" href="#" target="_blank" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center space-x-2 transition">
-                        <i class="fa-solid fa-file-pdf text-red-400"></i>
-                        <span>Download Official Clinical PDF Report</span>
+                </div>
+
+                <!-- Download Report Button -->
+                <div class="pt-4 space-y-2">
+                    <h4 class="text-sm font-bold text-slate-900">Export Documentation</h4>
+                    <a id="btn-download-pdf-report" href="#" target="_blank" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded text-sm font-semibold transition shadow-sm">
+                        <span>📄 Download Official PDF Research Report</span>
                     </a>
                 </div>
 
             </div>
-        </section>
+        </div>
 
+        <!-- ==================== MODULE 2: AUDIT LOG & HISTORY ==================== -->
+        <div id="module-history" class="hidden space-y-6">
+            <h3 class="text-xl font-bold text-slate-900">Audit Log &amp; Specimen History</h3>
 
-        <!-- ==================== VIEW 2: AUDIT LOG & HISTORY ==================== -->
-        <section id="view-history" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-900">Specimen Audit Trail & Database Log</h2>
-                    <p class="text-xs text-slate-500">Persistent SQLite recording for regulatory tracking and diagnostic telemetry.</p>
-                </div>
-                <div class="flex space-x-2">
-                    <a href="/api/export-csv" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-sm flex items-center space-x-2">
-                        <i class="fa-solid fa-file-csv text-emerald-600"></i>
-                        <span>Export CSV</span>
-                    </a>
-                    <button onclick="clearHistory()" class="px-4 py-2 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition">
-                        <i class="fa-solid fa-trash-can mr-1"></i>Clear History
-                    </button>
-                </div>
-            </div>
-
-            <!-- Stats Ribbon -->
+            <!-- 4 Metrics Row -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="glass-card rounded-xl p-4 border border-slate-200">
-                    <p class="text-xs text-slate-500 font-medium">Total Cells Evaluated</p>
-                    <p id="stat-total" class="text-2xl font-black text-slate-900 mt-1">0</p>
+                <div class="bg-white p-4 border border-slate-300 rounded shadow-sm text-center">
+                    <span class="text-xs font-medium text-slate-500">Total Cells Scanned</span>
+                    <div id="hist-total" class="text-2xl font-bold text-slate-900 mt-1">0</div>
                 </div>
-                <div class="glass-card rounded-xl p-4 border border-slate-200">
-                    <p class="text-xs text-slate-500 font-medium">Abnormal Detection Rate</p>
-                    <p id="stat-abnormal-rate" class="text-2xl font-black text-rose-600 mt-1">0.0%</p>
+                <div class="bg-white p-4 border border-slate-300 rounded shadow-sm text-center">
+                    <span class="text-xs font-medium text-slate-500">Abnormal Detection Rate</span>
+                    <div id="hist-rate" class="text-2xl font-bold text-red-600 mt-1">0.0%</div>
                 </div>
-                <div class="glass-card rounded-xl p-4 border border-slate-200">
-                    <p class="text-xs text-slate-500 font-medium">Mean Model Confidence</p>
-                    <p id="stat-avg-conf" class="text-2xl font-black text-slate-900 mt-1">0.0%</p>
+                <div class="bg-white p-4 border border-slate-300 rounded shadow-sm text-center">
+                    <span class="text-xs font-medium text-slate-500">Average Model Confidence</span>
+                    <div id="hist-conf" class="text-2xl font-bold text-slate-900 mt-1">0.0%</div>
                 </div>
-                <div class="glass-card rounded-xl p-4 border border-slate-200">
-                    <p class="text-xs text-slate-500 font-medium">Mean Risk Index</p>
-                    <p id="stat-avg-risk" class="text-2xl font-black text-cyan-600 mt-1">0.00</p>
+                <div class="bg-white p-4 border border-slate-300 rounded shadow-sm text-center">
+                    <span class="text-xs font-medium text-slate-500">Average Research Risk Score</span>
+                    <div id="hist-risk" class="text-2xl font-bold text-slate-900 mt-1">0.00</div>
                 </div>
             </div>
 
-            <!-- Table -->
-            <div class="glass-card rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="overflow-x-auto">
+            <!-- Data Table -->
+            <div class="bg-white border border-slate-300 rounded overflow-hidden shadow-sm">
+                <div class="overflow-x-auto max-h-96">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                        <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-300 sticky top-0">
                             <tr>
-                                <th class="py-3 px-4">#ID</th>
-                                <th class="py-3 px-4">Timestamp</th>
-                                <th class="py-3 px-4">Sample Specimen</th>
-                                <th class="py-3 px-4">Verdict</th>
-                                <th class="py-3 px-4">Confidence</th>
-                                <th class="py-3 px-4">Risk Score</th>
-                                <th class="py-3 px-4">Rct Impedance</th>
-                                <th class="py-3 px-4">Peak Current</th>
-                                <th class="py-3 px-4">Notes</th>
+                                <th class="py-2.5 px-3">id</th>
+                                <th class="py-2.5 px-3">timestamp</th>
+                                <th class="py-2.5 px-3">sample_id</th>
+                                <th class="py-2.5 px-3">prediction</th>
+                                <th class="py-2.5 px-3">confidence</th>
+                                <th class="py-2.5 px-3">risk_score</th>
+                                <th class="py-2.5 px-3">cell_area</th>
+                                <th class="py-2.5 px-3">circularity</th>
+                                <th class="py-2.5 px-3">peak_current</th>
+                                <th class="py-2.5 px-3">rct_impedance</th>
+                                <th class="py-2.5 px-3">notes</th>
                             </tr>
                         </thead>
-                        <tbody id="history-table-body" class="divide-y divide-slate-100 text-slate-700">
+                        <tbody id="hist-table-rows" class="divide-y divide-slate-200 text-slate-700">
                             <!-- Populated dynamically -->
                         </tbody>
                     </table>
                 </div>
             </div>
-        </section>
 
+            <!-- Export and Clear Buttons -->
+            <div class="flex space-x-4">
+                <a href="/api/export-csv" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-xs font-semibold text-slate-800 transition shadow-sm">
+                    📥 Export History to CSV
+                </a>
+                <button onclick="clearHistoryRecords()" class="px-4 py-2 bg-slate-100 hover:bg-red-50 text-red-600 border border-slate-300 hover:border-red-300 rounded text-xs font-semibold transition shadow-sm">
+                    🗑️ Clear Audit History
+                </button>
+            </div>
+        </div>
 
-        <!-- ==================== VIEW 3: ARCHITECTURE & SPECS ==================== -->
-        <section id="view-specs" class="hidden space-y-6">
-            <div class="glass-card rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
-                <h2 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
-                    <i class="fa-solid fa-microchip text-cyan-600"></i>
-                    <span>Multimodal AI Diagnostic Pipeline Architecture</span>
-                </h2>
-                
-                <p class="text-sm text-slate-600 leading-relaxed">
-                    This research prototype integrates high-resolution optical single-cell microscopy with 3-electrode electrochemical biosensing. Optical computer vision captures morphology and structural texture, while electrochemical impedance spectroscopy measures membrane dielectric integrity ($R_{ct}$, $C_{dl}$) and Faradaic redox kinetics.
-                </p>
+        <!-- ==================== MODULE 3: ARCHITECTURE & SPECS ==================== -->
+        <div id="module-specs" class="hidden space-y-6">
+            <h3 class="text-xl font-bold text-slate-900">System Architecture &amp; Benchmark Specs</h3>
 
-                <!-- Flowchart -->
-                <div class="bg-slate-900 text-cyan-300 font-mono text-xs p-5 rounded-xl overflow-x-auto shadow-inner leading-relaxed">
+            <div class="space-y-3">
+                <h4 class="text-sm font-bold text-slate-800">Multimodal Pipeline Architecture</h4>
+                <pre class="bg-slate-100 p-4 border border-slate-300 rounded text-xs font-mono overflow-x-auto text-slate-800 leading-relaxed">
 ┌───────────────────────────────────┐     ┌───────────────────────────────────┐
-│     Optical Cell Micrograph       │     │  Electrochemical Impedance Data   │
-│   (Single-Cell Brightfield)       │     │      (CV & EIS Randles Spectra)   │
+│     Single-Cell Micrograph        │     │  Simulated Electrochemical Data   │
+│   (Giemsa Optical Microscopy)     │     │      (CV & EIS Spectrograms)      │
 └─────────────────┬─────────────────┘     └─────────────────┬─────────────────┘
                   │                                         │
                   ▼                                         ▼
 ┌───────────────────────────────────┐     ┌───────────────────────────────────┐
-│ Image Preprocessing & CLAHE       │     │ Randles Circuit Parameterization  │
+│ Image Preprocessing & CLAHE       │     │ Randles Circuit Extraction        │
 │ Morphological Otsu Segmentation   │     │ (Peak Current, Rct, Cdl, Phase)   │
 └─────────────────┬─────────────────┘     └─────────────────┬─────────────────┘
                   │                                         │
@@ -457,134 +493,187 @@
                                       ▼
                   ┌───────────────────────────────────────┐
                   │    Healthy / Abnormal Classification  │
-                  │      + Continuous Risk Score (0-1)    │
+                  │      + Research Prototype Risk Score  │
                   └───────────────────────────────────────┘
-                </div>
+                </pre>
+            </div>
 
-                <!-- Model Performance Table -->
-                <h3 class="text-sm font-bold text-slate-900 mt-4">Independent Test Set Benchmark Metrics</h3>
-                <div class="overflow-x-auto rounded-xl border border-slate-200">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-                            <tr>
-                                <th class="py-2.5 px-4">Evaluation Metric</th>
-                                <th class="py-2.5 px-4">Optical Vision Alone</th>
-                                <th class="py-2.5 px-4 font-bold text-cyan-700">Multimodal Fused (Vision + Electrochemical)</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 text-slate-700">
-                            <tr><td class="py-2 px-4 font-medium">Accuracy</td><td class="py-2 px-4">~54.7% (Test)</td><td class="py-2 px-4 font-bold text-emerald-600">100.0%</td></tr>
-                            <tr><td class="py-2 px-4 font-medium">Sensitivity (Recall)</td><td class="py-2 px-4">76.0%</td><td class="py-2 px-4 font-bold text-emerald-600">100.0%</td></tr>
-                            <tr><td class="py-2 px-4 font-medium">Specificity</td><td class="py-2 px-4">33.3%</td><td class="py-2 px-4 font-bold text-emerald-600">100.0%</td></tr>
-                            <tr><td class="py-2 px-4 font-medium">F1-Score</td><td class="py-2 px-4">0.626</td><td class="py-2 px-4 font-bold text-emerald-600">1.000</td></tr>
-                            <tr><td class="py-2 px-4 font-medium">ROC-AUC</td><td class="py-2 px-4">0.787</td><td class="py-2 px-4 font-bold text-emerald-600">1.000</td></tr>
-                        </tbody>
-                    </table>
+            <div class="space-y-3 pt-2">
+                <h4 class="text-sm font-bold text-slate-800">Published Evaluation Metrics</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-3 border border-slate-300 rounded text-center">
+                        <img src="/reports/confusion_matrix.png" alt="Confusion Matrix" class="mx-auto max-h-64 object-contain">
+                        <span class="text-xs text-slate-500 mt-2 block">Confusion Matrix</span>
+                    </div>
+                    <div class="bg-white p-3 border border-slate-300 rounded text-center">
+                        <img src="/reports/roc_curve.png" alt="ROC Curve" class="mx-auto max-h-64 object-contain">
+                        <span class="text-xs text-slate-500 mt-2 block">ROC Curve (AUC = 1.000)</span>
+                    </div>
                 </div>
             </div>
-        </section>
+        </div>
 
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        <p>CytoBioScan AI — Multimodal Single-Cell Diagnostic System &copy; 2026. For Academic and Research Prototype Evaluation Only.</p>
-    </footer>
-
-    <!-- Frontend Application Logic -->
+    <!-- JavaScript Application Logic -->
     <script>
-        let selectedFile = null;
+        let currentSampleList = [];
         let selectedPresetPath = null;
-        let cvChartInstance = null;
-        let eisChartInstance = null;
+        let uploadedImageFile = null;
+        let uploadedSensorFile = null;
+        let chartCvInstance = null;
+        let chartEisInstance = null;
 
-        function switchTab(tab) {
-            ['studio', 'history', 'specs'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                const btn = document.getElementById(`tab-btn-${t}`);
-                btn.className = "nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60";
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            onClassChange();
+        });
+
+        function switchModule(mod) {
+            ['analysis', 'history', 'specs'].forEach(m => {
+                document.getElementById(`module-${m}`).classList.add('hidden');
+                document.getElementById(`radio-${m}`).checked = (m === mod);
             });
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            const activeBtn = document.getElementById(`tab-btn-${tab}`);
-            activeBtn.className = "nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all text-white bg-slate-800 shadow-sm border border-slate-700";
+            document.getElementById(`module-${mod}`).classList.remove('hidden');
 
-            if (tab === 'history') {
-                loadHistory();
+            if (mod === 'history') {
+                loadHistoryData();
             }
         }
 
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
+        function toggleImageSource(mode) {
+            if (mode === 'library') {
+                document.getElementById('box-image-library').classList.remove('hidden');
+                document.getElementById('box-image-upload').classList.add('hidden');
+                uploadedImageFile = null;
+                onSampleChange();
+            } else {
+                document.getElementById('box-image-library').classList.add('hidden');
+                document.getElementById('box-image-upload').classList.remove('hidden');
+                selectedPresetPath = null;
+                document.getElementById('input-preview-img').src = '';
+                document.getElementById('input-preview-label').innerText = 'No file selected';
+            }
+        }
+
+        function toggleSensorSource(mode) {
+            if (mode === 'simulate') {
+                document.getElementById('box-sensor-simulate').classList.remove('hidden');
+                document.getElementById('box-sensor-csv').classList.add('hidden');
+                uploadedSensorFile = null;
+            } else {
+                document.getElementById('box-sensor-simulate').classList.add('hidden');
+                document.getElementById('box-sensor-csv').classList.remove('hidden');
+            }
+        }
+
+        async function onClassChange() {
+            const cat = document.getElementById('select-target-class').value;
+            // Also synchronize sensor condition to match class default
+            document.getElementById('select-membrane-condition').value = cat;
+
+            try {
+                const res = await fetch(`/api/sample-images?category=${cat}`);
+                const data = await res.json();
+                currentSampleList = data.samples || [];
+
+                const select = document.getElementById('select-sample-file');
+                select.innerHTML = '';
+                currentSampleList.forEach((s, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = s.path;
+                    opt.innerText = s.name;
+                    select.appendChild(opt);
+                });
+
+                if (currentSampleList.length > 0) {
+                    onSampleChange();
+                }
+            } catch (err) {
+                console.error('Failed to load samples:', err);
+            }
+        }
+
+        function onSampleChange() {
+            const select = document.getElementById('select-sample-file');
+            selectedPresetPath = select.value;
+            uploadedImageFile = null;
+
+            const found = currentSampleList.find(s => s.path === selectedPresetPath);
+            if (found) {
+                document.getElementById('input-preview-img').src = found.url;
+                document.getElementById('input-preview-label').innerText = found.name;
+            }
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
             if (!file) return;
-            selectedFile = file;
+            uploadedImageFile = file;
             selectedPresetPath = null;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('image-preview').src = e.target.result;
-                document.getElementById('preview-filename').innerText = file.name;
-                document.getElementById('dropzone-prompt').classList.add('hidden');
-                document.getElementById('preview-container').classList.remove('hidden');
+            reader.onload = function(evt) {
+                document.getElementById('input-preview-img').src = evt.target.result;
+                document.getElementById('input-preview-label').innerText = file.name;
             };
             reader.readAsDataURL(file);
         }
 
-        async function loadPresetSample(category) {
-            try {
-                const res = await fetch(`/api/sample-images?category=${category}`);
-                const data = await res.json();
-                if (data.samples && data.samples.length > 0) {
-                    const sample = data.samples[0];
-                    selectedPresetPath = sample.path;
-                    selectedFile = null;
-
-                    document.getElementById('image-preview').src = sample.url;
-                    document.getElementById('preview-filename').innerText = `[Benchmark Library] ${sample.name}`;
-                    document.getElementById('dropzone-prompt').classList.add('hidden');
-                    document.getElementById('preview-container').classList.remove('hidden');
-
-                    // Synchronize sensor condition dropdown
-                    document.getElementById('sensor-cell-condition').value = category;
-                }
-            } catch (err) {
-                alert('Failed to load sample library: ' + err);
+        function handleCsvUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadedSensorFile = file;
+                document.getElementById('sensor-csv-name').innerText = `Selected: ${file.name}`;
             }
         }
 
-        async function runAnalysis() {
-            if (!selectedFile && !selectedPresetPath) {
-                alert('Please upload a cell micrograph or click one of the quick benchmark buttons!');
+        function switchResultTab(tabName) {
+            if (tabName === 'tab-img') {
+                document.getElementById('content-tab-img').classList.remove('hidden');
+                document.getElementById('content-tab-sensor').classList.add('hidden');
+                document.getElementById('btn-tab-img').className = "pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2";
+                document.getElementById('btn-tab-sensor').className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2";
+            } else {
+                document.getElementById('content-tab-img').classList.add('hidden');
+                document.getElementById('content-tab-sensor').classList.remove('hidden');
+                document.getElementById('btn-tab-img').className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2";
+                document.getElementById('btn-tab-sensor').className = "pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2";
+            }
+        }
+
+        async function executeAnalysis() {
+            if (!selectedPresetPath && !uploadedImageFile) {
+                alert('Please select or upload a cell micrograph before analyzing.');
                 return;
             }
 
-            const loader = document.getElementById('analysis-loader');
-            const results = document.getElementById('results-panel');
+            const loader = document.getElementById('loading-box');
+            const results = document.getElementById('results-box');
             loader.classList.remove('hidden');
             results.classList.add('hidden');
 
-            const formData = new FormData();
-            if (selectedFile) {
-                formData.append('image_file', selectedFile);
+            const fd = new FormData();
+            if (uploadedImageFile) {
+                fd.append('image_file', uploadedImageFile);
             } else if (selectedPresetPath) {
-                formData.append('preset_path', selectedPresetPath);
+                fd.append('preset_path', selectedPresetPath);
             }
 
-            formData.append('cell_condition', document.getElementById('sensor-cell-condition').value);
-            formData.append('noise_level', (parseFloat(document.getElementById('noise-slider').value) / 100).toString());
-            formData.append('notes', document.getElementById('analyst-notes').value);
+            if (uploadedSensorFile) {
+                fd.append('sensor_file', uploadedSensorFile);
+            }
+
+            fd.append('cell_condition', document.getElementById('select-membrane-condition').value);
+            fd.append('noise_level', (parseFloat(document.getElementById('slider-noise').value) / 100).toString());
+            fd.append('notes', document.getElementById('input-notes').value);
 
             try {
-                const resp = await fetch('/api/analyze', {
-                    method: 'POST',
-                    body: formData
-                });
+                const resp = await fetch('/api/analyze', { method: 'POST', body: fd });
                 const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'Server error');
 
-                if (!resp.ok) {
-                    throw new Error(data.error || 'Server processing error');
-                }
-
-                displayResults(data);
+                renderResults(data);
             } catch (err) {
                 alert('Analysis failed: ' + err.message);
             } finally {
@@ -592,83 +681,95 @@
             }
         }
 
-        function displayResults(data) {
-            const results = document.getElementById('results-panel');
+        function renderResults(data) {
+            const results = document.getElementById('results-box');
             results.classList.remove('hidden');
 
-            // 1. Verdict Badge
-            const badge = document.getElementById('res-badge');
+            // 1. Success Box
+            document.getElementById('res-sample-name').innerText = data.sample_id;
+            document.getElementById('res-record-id').innerText = data.db_record_id || '1';
+
+            // 2. Verdict Badge
+            const badge = document.getElementById('badge-verdict');
             if (data.prediction === 'Abnormal') {
                 badge.innerText = 'ABNORMAL';
-                badge.className = 'px-5 py-2 rounded-xl text-lg font-black tracking-wide inline-block bg-rose-50 text-rose-700 border border-rose-300 pulse-abnormal';
+                badge.className = 'status-abnormal';
             } else {
                 badge.innerText = 'HEALTHY';
-                badge.className = 'px-5 py-2 rounded-xl text-lg font-black tracking-wide inline-block bg-emerald-50 text-emerald-700 border border-emerald-300 pulse-healthy';
+                badge.className = 'status-healthy';
             }
 
-            // 2. Confidence & Risk Score
-            document.getElementById('res-confidence').innerText = `${data.confidence}%`;
-            document.getElementById('res-posterior').innerText = `P(Abnormal) = ${data.p_abnormal}`;
-            
-            const riskSpan = document.getElementById('res-risk-score');
-            riskSpan.innerText = data.risk_score.toFixed(2);
+            // 3. Confidence & Posterior
+            document.getElementById('text-confidence').innerText = `${data.confidence}%`;
+            document.getElementById('text-posterior').innerText = `Posterior Probability: ${(data.confidence/100).toFixed(4)}`;
+
+            // 4. Risk Score
+            const riskElem = document.getElementById('text-risk-score');
+            riskElem.innerHTML = `${data.risk_score.toFixed(2)} <small class="text-xs text-slate-500 font-normal">/ 1.00</small>`;
+            const riskDesc = document.getElementById('text-risk-desc');
+
             if (data.risk_score >= 0.65) {
-                riskSpan.className = 'text-3xl font-black tracking-tight text-rose-600';
-                document.getElementById('res-risk-level').innerText = 'Elevated Cellular Atypia';
+                riskElem.style.color = '#922B21';
+                riskDesc.innerText = 'High Cellular Atypia';
             } else if (data.risk_score >= 0.35) {
-                riskSpan.className = 'text-3xl font-black tracking-tight text-amber-600';
-                document.getElementById('res-risk-level').innerText = 'Moderate Anomaly Index';
+                riskElem.style.color = '#E28743';
+                riskDesc.innerText = 'Moderate Anomaly';
             } else {
-                riskSpan.className = 'text-3xl font-black tracking-tight text-emerald-600';
-                document.getElementById('res-risk-level').innerText = 'Low Anomaly / Physiological';
+                riskElem.style.color = '#145A32';
+                riskDesc.innerText = 'Low Anomaly';
             }
 
-            // 3. Visuals
-            document.getElementById('vis-raw').src = 'data:image/png;base64,' + data.vis_raw;
-            document.getElementById('vis-enhanced').src = 'data:image/png;base64,' + data.vis_enhanced;
-            document.getElementById('vis-overlay').src = 'data:image/png;base64,' + data.vis_overlay;
+            // 5. Visuals
+            document.getElementById('res-img-raw').src = 'data:image/png;base64,' + data.vis_raw;
+            document.getElementById('res-img-enhanced').src = 'data:image/png;base64,' + data.vis_enhanced;
+            document.getElementById('res-img-overlay').src = 'data:image/png;base64,' + data.vis_overlay;
 
-            // 4. Morphological Table
-            const tbody = document.getElementById('morpho-table-body');
-            tbody.innerHTML = `
-                <tr><td class="py-1.5 px-3">Cell Area</td><td class="py-1.5 px-3 text-right font-mono font-semibold">${data.image_features.cell_area} px²</td></tr>
-                <tr><td class="py-1.5 px-3">Circularity (4πA/P²)</td><td class="py-1.5 px-3 text-right font-mono font-semibold">${data.image_features.circularity}</td></tr>
-                <tr><td class="py-1.5 px-3">Aspect Ratio</td><td class="py-1.5 px-3 text-right font-mono font-semibold">${data.image_features.aspect_ratio}</td></tr>
-                <tr><td class="py-1.5 px-3">Texture Variance</td><td class="py-1.5 px-3 text-right font-mono font-semibold">${data.image_features.texture_variance}</td></tr>
-                <tr><td class="py-1.5 px-3">Rct Impedance</td><td class="py-1.5 px-3 text-right font-mono font-semibold">${data.sensor_features.charge_transfer_resistance} Ω</td></tr>
-                <tr><td class="py-1.5 px-3">Peak Current (Ipa)</td><td class="py-1.5 px-3 text-right font-mono font-semibold">${data.sensor_features.peak_anodic_current} µA</td></tr>
+            // 6. Tables
+            document.getElementById('table-img-metrics').innerHTML = `
+                <tr><td class="py-1.5 px-3">Cell Area (px²)</td><td class="py-1.5 px-3 text-right">${data.image_features.cell_area}</td></tr>
+                <tr><td class="py-1.5 px-3">Circularity (0 to 1)</td><td class="py-1.5 px-3 text-right">${data.image_features.circularity}</td></tr>
+                <tr><td class="py-1.5 px-3">Aspect Ratio</td><td class="py-1.5 px-3 text-right">${data.image_features.aspect_ratio}</td></tr>
+                <tr><td class="py-1.5 px-3">Texture Variance</td><td class="py-1.5 px-3 text-right">${data.image_features.texture_variance}</td></tr>
+                <tr><td class="py-1.5 px-3">Mean Intensity</td><td class="py-1.5 px-3 text-right">${data.image_features.mean_intensity}</td></tr>
             `;
 
-            // 5. Render Charts
-            renderCVChart(data.cv_data);
-            renderEISChart(data.eis_data);
+            document.getElementById('table-sensor-metrics').innerHTML = `
+                <tr><td class="py-1.5 px-3">Peak Anodic Current (Ipa)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.peak_anodic_current} µA</td></tr>
+                <tr><td class="py-1.5 px-3">Charge Transfer Res. (Rct)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.charge_transfer_resistance} Ω</td></tr>
+                <tr><td class="py-1.5 px-3">Capacitance (Cdl)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.double_layer_capacitance_uf} µF</td></tr>
+                <tr><td class="py-1.5 px-3">Peak Separation (ΔEp)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.delta_peak_potential} mV</td></tr>
+                <tr><td class="py-1.5 px-3">Impedance |Z| at 1 Hz</td><td class="py-1.5 px-3 text-right">${data.sensor_features.impedance_low_freq} Ω</td></tr>
+            `;
 
-            // 6. PDF Report Link
+            // 7. Render Charts
+            drawCVChart(data.cv_data);
+            drawEISChart(data.eis_data);
+
+            // 8. PDF Download Button
             if (data.report_filename) {
-                document.getElementById('btn-download-pdf').href = `/api/download-report/${data.report_filename}`;
+                document.getElementById('btn-download-pdf-report').href = `/api/download-report/${data.report_filename}`;
             }
 
-            // Scroll smoothly to results
+            // Scroll down smoothly
             results.scrollIntoView({ behavior: 'smooth' });
         }
 
-        function renderCVChart(cv) {
+        function drawCVChart(cv) {
             const ctx = document.getElementById('chart-cv').getContext('2d');
-            if (cvChartInstance) cvChartInstance.destroy();
+            if (chartCvInstance) chartCvInstance.destroy();
 
-            cvChartInstance = new Chart(ctx, {
+            chartCvInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: cv.potential_v.map(v => v.toFixed(2)),
                     datasets: [{
                         label: 'Current (µA)',
                         data: cv.current_ua,
-                        borderColor: '#0284c7',
-                        backgroundColor: 'rgba(2, 132, 199, 0.05)',
+                        borderColor: '#0066cc',
                         borderWidth: 2,
                         pointRadius: 0,
-                        tension: 0.3,
-                        fill: true
+                        tension: 0.1,
+                        fill: false
                     }]
                 },
                 options: {
@@ -676,30 +777,30 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { title: { display: true, text: 'Potential (V)', font: { size: 10 } } },
+                        x: { title: { display: true, text: 'Potential vs. Ref (V)', font: { size: 10 } } },
                         y: { title: { display: true, text: 'Current (µA)', font: { size: 10 } } }
                     }
                 }
             });
         }
 
-        function renderEISChart(eis) {
+        function drawEISChart(eis) {
             const ctx = document.getElementById('chart-eis').getContext('2d');
-            if (eisChartInstance) eisChartInstance.destroy();
+            if (chartEisInstance) chartEisInstance.destroy();
 
-            const scatterData = eis.z_real_ohm.map((r, i) => ({ x: r, y: eis.z_imag_ohm[i] }));
+            const pts = eis.z_real_ohm.map((r, i) => ({ x: r, y: eis.z_imag_ohm[i] }));
 
-            eisChartInstance = new Chart(ctx, {
+            chartEisInstance = new Chart(ctx, {
                 type: 'scatter',
                 data: {
                     datasets: [{
-                        label: "Nyquist -Z'' vs Z'",
-                        data: scatterData,
-                        borderColor: '#9333ea',
-                        backgroundColor: '#a855f7',
+                        label: "Nyquist",
+                        data: pts,
+                        borderColor: '#800080',
+                        backgroundColor: '#800080',
                         showLine: true,
-                        borderWidth: 2,
-                        pointRadius: 2.5
+                        borderWidth: 1.5,
+                        pointRadius: 3
                     }]
                 },
                 options: {
@@ -714,51 +815,49 @@
             });
         }
 
-        async function loadHistory() {
+        async function loadHistoryData() {
             try {
-                const res = await fetch('/api/history');
-                const data = await res.json();
+                const resp = await fetch('/api/history');
+                const data = await resp.json();
 
-                document.getElementById('stat-total').innerText = data.stats.total_scans;
-                document.getElementById('stat-abnormal-rate').innerText = `${data.stats.abnormal_rate}%`;
-                document.getElementById('stat-avg-conf').innerText = `${data.stats.avg_confidence}%`;
-                document.getElementById('stat-avg-risk').innerText = data.stats.avg_risk_score.toFixed(2);
+                document.getElementById('hist-total').innerText = data.stats.total_scans;
+                document.getElementById('hist-rate').innerText = `${data.stats.abnormal_rate}%`;
+                document.getElementById('hist-conf').innerText = `${data.stats.avg_confidence}%`;
+                document.getElementById('hist-risk').innerText = data.stats.avg_risk_score.toFixed(2);
 
-                const tbody = document.getElementById('history-table-body');
-                if (data.records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-slate-400">No diagnostic audit records yet.</td></tr>';
+                const tbody = document.getElementById('hist-table-rows');
+                if (!data.records || data.records.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="11" class="py-4 text-center text-slate-400">No prediction history recorded yet.</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.records.map(r => `
                     <tr class="hover:bg-slate-50">
-                        <td class="py-2.5 px-4 font-mono font-bold text-slate-500">#${r.id}</td>
-                        <td class="py-2.5 px-4 text-slate-500 whitespace-nowrap">${r.timestamp}</td>
-                        <td class="py-2.5 px-4 font-medium text-slate-900">${r.sample_id}</td>
-                        <td class="py-2.5 px-4">
-                            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${r.prediction === 'Abnormal' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}">
-                                ${r.prediction}
-                            </span>
-                        </td>
-                        <td class="py-2.5 px-4 font-mono font-semibold">${r.confidence}%</td>
-                        <td class="py-2.5 px-4 font-mono font-semibold text-cyan-700">${r.risk_score}</td>
-                        <td class="py-2.5 px-4 font-mono">${r.rct_impedance || '-'} Ω</td>
-                        <td class="py-2.5 px-4 font-mono">${r.peak_current || '-'} µA</td>
-                        <td class="py-2.5 px-4 text-slate-400 max-w-xs truncate">${r.notes || '-'}</td>
+                        <td class="py-2 px-3 font-mono">${r.id}</td>
+                        <td class="py-2 px-3 whitespace-nowrap text-slate-500">${r.timestamp}</td>
+                        <td class="py-2 px-3 font-semibold text-slate-900">${r.sample_id}</td>
+                        <td class="py-2 px-3 font-bold ${r.prediction === 'Abnormal' ? 'text-red-600' : 'text-emerald-700'}">${r.prediction}</td>
+                        <td class="py-2 px-3 font-mono">${r.confidence}%</td>
+                        <td class="py-2 px-3 font-mono">${r.risk_score}</td>
+                        <td class="py-2 px-3 font-mono">${r.cell_area || '-'}</td>
+                        <td class="py-2 px-3 font-mono">${r.circularity || '-'}</td>
+                        <td class="py-2 px-3 font-mono">${r.peak_current || '-'}</td>
+                        <td class="py-2 px-3 font-mono">${r.rct_impedance || '-'}</td>
+                        <td class="py-2 px-3 text-slate-400">${r.notes || ''}</td>
                     </tr>
                 `).join('');
             } catch (err) {
-                console.error('History load error:', err);
+                console.error('Failed to load history:', err);
             }
         }
 
-        async function clearHistory() {
-            if (!confirm('Are you sure you want to clear the entire audit log?')) return;
+        async function clearHistoryRecords() {
+            if (!confirm('Are you sure you want to clear the audit history?')) return;
             try {
                 await fetch('/api/history/clear', { method: 'POST' });
-                loadHistory();
+                loadHistoryData();
             } catch (err) {
-                alert('Failed to clear history: ' + err);
+                alert('Clear history error: ' + err);
             }
         }
     </script>
