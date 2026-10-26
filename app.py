@@ -63,6 +63,7 @@ from reports.generate_report import generate_pdf_report
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 TELEMETRY_CACHE = {}
 
 
