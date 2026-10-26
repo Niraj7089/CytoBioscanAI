@@ -27,7 +27,8 @@ def generate_pdf_report(
     image_features: Dict[str, float],
     sensor_features: Dict[str, float],
     notes: str = "",
-    output_filename: Optional[str] = None
+    output_filename: Optional[str] = None,
+    instrument_metrics: Optional[Dict[str, Any]] = None,
 ) -> Path:
     """Generate a structured, clinical-grade Research Prototype PDF Report.
 
@@ -40,6 +41,7 @@ def generate_pdf_report(
         sensor_features: Simulated electrochemical sensor metrics.
         notes: Optional analyst observations.
         output_filename: Optional custom PDF file name.
+        instrument_metrics: Optional SECM and DPV/CA high-precision metrics.
 
     Returns:
         Path to the generated PDF report.
@@ -216,7 +218,34 @@ def generate_pdf_report(
         ("PADDING", (0, 0), (-1, -1), 0),
     ]))
     story.append(side_by_side)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 10))
+
+    # Scanning Probe & Advanced Voltammetry Diagnostics
+    if instrument_metrics:
+        story.append(Paragraph("Scanning Probe & Voltammetric Telemetry", section_style))
+        probe_rows = [
+            [
+                Paragraph("<b>SECM Feedback Regime:</b>", body_style),
+                Paragraph(str(instrument_metrics.get("secm_feedback", "Negative Feedback")), body_style),
+                Paragraph("<b>Min Local Current:</b>", body_style),
+                Paragraph(f"{instrument_metrics.get('secm_min_current_na', '-')} nA", body_style),
+            ],
+            [
+                Paragraph("<b>DPV Peak Amplitude:</b>", body_style),
+                Paragraph(f"{instrument_metrics.get('dpv_peak_current_ua', '-')} µA", body_style),
+                Paragraph("<b>Peak Phase Angle:</b>", body_style),
+                Paragraph(f"{sensor_features.get('min_phase_angle', '-')}°", body_style),
+            ],
+        ]
+        probe_tbl = Table(probe_rows, colWidths=[140, 160, 120, 112])
+        probe_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8F9FA")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+            ("PADDING", (0, 0), (-1, -1), 5),
+        ]))
+        story.append(probe_tbl)
+        story.append(Spacer(1, 10))
 
     # Notes & Auditor Sign-off
     if notes:

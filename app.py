@@ -38,6 +38,11 @@ from src.image_processing.feature_extractor import extract_image_features
 from src.sensor_simulation.simulator import (
     simulate_cyclic_voltammetry,
     simulate_impedance_spectroscopy,
+    simulate_secm_approach_curve,
+    simulate_secm_2d_surface_scan,
+    simulate_differential_pulse_voltammetry,
+    simulate_chronoamperometry,
+    format_instrument_telemetry_csv,
     extract_sensor_features,
 )
 from src.feature_engineering.fusion import prepare_single_sample_features
@@ -58,6 +63,7 @@ from reports.generate_report import generate_pdf_report
 # Initialize Flask App
 app = Flask(__name__, template_folder="templates")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
+TELEMETRY_CACHE = {}
 
 
 def np_image_to_base64(img_rgb: np.ndarray) -> str:
@@ -176,7 +182,31 @@ def analyze():
             cv_data = simulate_cyclic_voltammetry(cell_type=cell_condition, noise_level=noise_level)
             eis_data = simulate_impedance_spectroscopy(cell_type=cell_condition, noise_level=noise_level)
 
-        # 5. Multimodal Feature Fusion & Inference
+        # 5. High-Precision Scanning Probe & Advanced Voltammetry Simulation
+        secm_app = simulate_secm_approach_curve(cell_type=cell_condition, noise_level=noise_level)
+        secm_2d = simulate_secm_2d_surface_scan(cell_type=cell_condition, mask=mask, noise_level=noise_level)
+        dpv_data = simulate_differential_pulse_voltammetry(cell_type=cell_condition, noise_level=noise_level)
+        ca_data = simulate_chronoamperometry(cell_type=cell_condition, noise_level=noise_level)
+
+        instrument_metrics = {
+            "secm_feedback": secm_app["feedback_mode"],
+            "secm_min_current_na": secm_2d["min_probe_current_na"],
+            "dpv_peak_current_ua": dpv_data["peak_current_ua"],
+        }
+
+        # Cache laboratory telemetry file
+        telemetry_txt = format_instrument_telemetry_csv(
+            sample_id=sample_id,
+            cell_type=cell_condition,
+            cv_data=cv_data,
+            eis_data=eis_data,
+            secm_approach=secm_app,
+            dpv_data=dpv_data,
+            ca_data=ca_data,
+        )
+        TELEMETRY_CACHE[sample_id] = telemetry_txt
+
+        # 6. Multimodal Feature Fusion & Inference
         _, scaled_vec = prepare_single_sample_features(img_features, sensor_features)
         model = load_multimodal_model()
 
@@ -186,14 +216,14 @@ def analyze():
         prediction = config.INV_LABEL_MAP[pred_idx]
         confidence_pct = round(float(np.max(probabilities)) * 100.0, 1)
 
-        # 6. Continuous Research Prototype Risk Score
+        # 7. Continuous Research Prototype Risk Score
         risk_score = compute_research_risk_score(
             p_abnormal=p_abnormal,
             image_features=img_features,
             sensor_features=sensor_features,
         )
 
-        # 7. Database Persistence
+        # 8. Database Persistence
         db_id = save_prediction(
             sample_id=sample_id,
             image_name=sample_id,
@@ -207,7 +237,7 @@ def analyze():
             notes=notes,
         )
 
-        # 8. Clinical PDF Report Generation
+        # 9. Clinical PDF Report Generation
         pdf_path = generate_pdf_report(
             sample_id=sample_id,
             prediction=prediction,
@@ -216,9 +246,10 @@ def analyze():
             image_features=img_features,
             sensor_features=sensor_features,
             notes=notes,
+            instrument_metrics=instrument_metrics,
         )
 
-        # 9. Format Response Payload
+        # 10. Format Response Payload
         response_data = {
             "sample_id": sample_id,
             "prediction": prediction,
@@ -229,18 +260,33 @@ def analyze():
             "report_filename": pdf_path.name,
             "image_features": img_features,
             "sensor_features": sensor_features,
+            "instrument_metrics": instrument_metrics,
             "vis_raw": np_image_to_base64(raw_rgb),
             "vis_enhanced": np_image_to_base64(enhanced_uint8),
             "vis_overlay": np_image_to_base64(overlay),
             "cv_data": {
                 "potential_v": cv_data["potential_v"].tolist(),
                 "current_ua": cv_data["current_ua"].tolist(),
+                "ipa": cv_data.get("ipa", round(float(np.max(cv_data["current_ua"])), 2)),
+                "ipc": cv_data.get("ipc", round(float(np.min(cv_data["current_ua"])), 2)),
+                "delta_ep": cv_data.get("delta_ep", 80.0),
             },
             "eis_data": {
                 "frequency_hz": eis_data["frequency_hz"].tolist(),
                 "z_real_ohm": eis_data["z_real_ohm"].tolist(),
                 "z_imag_ohm": eis_data["z_imag_ohm"].tolist(),
+                "z_mag_ohm": eis_data["z_mag_ohm"].tolist(),
+                "phase_deg": eis_data["phase_deg"].tolist(),
+                "rct": eis_data.get("rct", 1000.0),
+                "cdl": round(float(eis_data.get("cdl", 2e-6)) * 1e6, 4) if float(eis_data.get("cdl", 2e-6)) < 0.1 else round(float(eis_data.get("cdl", 2e-6)), 4),
+                "rs": eis_data.get("rs", 50.0),
             },
+            "secm_data": {
+                "approach": secm_app,
+                "surface_2d": secm_2d,
+            },
+            "dpv_data": dpv_data,
+            "ca_data": ca_data,
         }
         return jsonify(response_data)
 
@@ -284,6 +330,35 @@ def download_report(filename):
         return "Report file not found", 404
 
     return send_file(report_file, mimetype="application/pdf", as_attachment=True, download_name=safe_filename)
+
+
+@app.route("/api/download-telemetry/<sample_id>", methods=["GET"])
+def download_telemetry(sample_id):
+    """Download laboratory-grade multi-technique CSV telemetry log."""
+    safe_id = Path(sample_id).name
+    telemetry_content = TELEMETRY_CACHE.get(safe_id)
+    if not telemetry_content:
+        # Generate on-demand default
+        cv_d = simulate_cyclic_voltammetry()
+        eis_d = simulate_impedance_spectroscopy()
+        secm_app = simulate_secm_approach_curve()
+        dpv_d = simulate_differential_pulse_voltammetry()
+        ca_d = simulate_chronoamperometry()
+        telemetry_content = format_instrument_telemetry_csv(
+            sample_id=safe_id,
+            cell_type="Healthy",
+            cv_data=cv_d,
+            eis_data=eis_d,
+            secm_approach=secm_app,
+            dpv_data=dpv_d,
+            ca_data=ca_d,
+        )
+
+    return Response(
+        telemetry_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=telemetry_{safe_id}.csv"}
+    )
 
 
 @app.route("/api/export-csv", methods=["GET"])

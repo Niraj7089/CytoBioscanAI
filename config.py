@@ -66,8 +66,29 @@ EIS_FREQ_MAX = 100000.0  # Maximum frequency (Hz)
 EIS_NUM_POINTS = 50      # Number of logarithmically spaced frequency points
 EIS_R_SOL = 50.0         # Solution resistance Rs (Ohms)
 
+# Scanning Electrochemical Microscopy (SECM / e-SPM) Parameters
+SECM_PROBE_RADIUS_UM = 1.0       # Ultramicroelectrode (UME) radius a (microns)
+SECM_SCAN_RANGE_UM = 20.0        # Spatial scan width & height (microns)
+SECM_GRID_POINTS = 25            # Raster resolution (25x25 spatial points)
+SECM_BULK_CURRENT_NA = 10.0      # Asymptotic bulk steady-state current I_infinity (nA)
+SECM_L_START = 4.0               # Normalized approach distance L = d/a start
+SECM_L_END = 0.25                # Normalized approach distance L = d/a end
+SECM_APPROACH_POINTS = 40        # Number of approach curve sample points
+
+# Differential Pulse Voltammetry (DPV) Parameters
+DPV_PULSE_HEIGHT_MV = 50.0       # Pulse modulation amplitude (mV)
+DPV_STEP_MV = 4.0                # Potential increment step (mV)
+DPV_E_START = -0.3               # Start potential (V)
+DPV_E_END = 0.7                  # End potential (V)
+
+# Chronoamperometry (CA) Parameters
+CA_DURATION_SEC = 5.0            # Duration (seconds)
+CA_POINTS = 100                  # Number of transient points
+CA_E_STEP = 0.4                  # Step potential (V)
+
 # Biophysical / Electrochemical Profiles by Class
-# Intact healthy cell membrane: higher charge transfer resistance (Rct), lower capacitance, lower peak Faradaic current
+# Intact healthy cell membrane: higher charge transfer resistance (Rct), lower capacitance, lower peak Faradaic current,
+# negative feedback SECM approach (hindered diffusion), lower DPV peak.
 ELECTROCHEMICAL_PROFILES = {
     "Healthy": {
         "rct_mean": 1500.0,
@@ -80,8 +101,12 @@ ELECTROCHEMICAL_PROFILES = {
         "ipc_std": 1.1,
         "delta_ep_mean": 75.0, # mV
         "delta_ep_std": 6.0,
+        "secm_feedback": "Negative Feedback (Intact Dielectric Membrane)",
+        "secm_min_current_na": 3.4,
+        "dpv_peak_current_ua": 8.5,
     },
-    # Compromised / abnormal cell membrane: membrane permeabilization causes lower Rct, higher capacitance, higher redox current
+    # Compromised / abnormal cell membrane: membrane permeabilization causes lower Rct, higher capacitance, higher redox current,
+    # intermediate/permeable SECM approach (increased mediator flux across compromised membrane), elevated DPV peak.
     "Abnormal": {
         "rct_mean": 620.0,
         "rct_std": 70.0,
@@ -93,6 +118,9 @@ ELECTROCHEMICAL_PROFILES = {
         "ipc_std": 1.9,
         "delta_ep_mean": 115.0,# mV
         "delta_ep_std": 10.0,
+        "secm_feedback": "Permeable / Conductive Feedback (Membrane Disruption)",
+        "secm_min_current_na": 8.2,
+        "dpv_peak_current_ua": 18.2,
     }
 }
 

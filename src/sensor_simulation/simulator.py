@@ -142,19 +142,285 @@ def simulate_impedance_spectroscopy(
 def simulate_full_cell_signal(
     cell_type: str = "Healthy",
     noise_level: float = 0.05,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
+    mask: Optional[np.ndarray] = None
 ) -> Dict[str, Any]:
-    """Generate both Cyclic Voltammetry and EIS simulated measurements for a cell."""
+    """Generate complete multi-technique electrochemical & scanning probe simulated measurements for a cell."""
     cv = simulate_cyclic_voltammetry(cell_type=cell_type, noise_level=noise_level, seed=seed)
     eis_seed = (seed + 9999) if seed is not None else None
     eis = simulate_impedance_spectroscopy(cell_type=cell_type, noise_level=noise_level, seed=eis_seed)
+    secm_seed = (seed + 12345) if seed is not None else None
+    secm_app = simulate_secm_approach_curve(cell_type=cell_type, noise_level=noise_level, seed=secm_seed)
+    secm_2d = simulate_secm_2d_surface_scan(cell_type=cell_type, mask=mask, noise_level=noise_level, seed=secm_seed)
+    dpv = simulate_differential_pulse_voltammetry(cell_type=cell_type, noise_level=noise_level, seed=seed)
+    ca = simulate_chronoamperometry(cell_type=cell_type, noise_level=noise_level, seed=seed)
 
     return {
         "cell_type": cell_type,
         "cv": cv,
         "eis": eis,
+        "secm_approach": secm_app,
+        "secm_2d": secm_2d,
+        "dpv": dpv,
+        "ca": ca,
         "features": extract_sensor_features(cv, eis),
     }
+
+
+def simulate_secm_approach_curve(
+    cell_type: str = "Healthy",
+    noise_level: float = 0.04,
+    seed: Optional[int] = None
+) -> Dict[str, Any]:
+    """Simulate a Scanning Electrochemical Microscopy (SECM) microelectrode approach curve.
+
+    Plots normalized current (I_T = I/I_inf) vs normalized tip-substrate distance (L = d/a),
+    distinguishing intact dielectric cellular membrane (negative feedback) from
+    compromised / permeabilized membrane (permeable / conductive feedback).
+
+    Returns:
+        Dictionary with:
+            - 'normalized_distance_l': Array of L = d/a values
+            - 'distance_um': Tip-to-cell physical distance (microns)
+            - 'normalized_current': Normalized current I_T (I/I_inf)
+            - 'current_na': Absolute probe current (nA)
+            - 'feedback_mode': Description string of feedback regime
+    """
+    rng = np.random.RandomState(seed)
+    a_um = config.SECM_PROBE_RADIUS_UM
+    i_bulk_na = config.SECM_BULK_CURRENT_NA
+    l_vals = np.linspace(config.SECM_L_START, config.SECM_L_END, config.SECM_APPROACH_POINTS)
+
+    # Theoretical negative feedback (insulating boundary: intact cell membrane)
+    # Paoletti empirical formula for inlaid microdisk
+    i_neg = 1.0 / (0.15 + (1.53 / l_vals) + 0.58 * np.exp(-1.14 / l_vals) + 0.09 * np.exp(-0.14 / l_vals))
+
+    # Theoretical positive feedback (conductive substrate)
+    i_pos = 0.68 + (0.78377 / l_vals) + 0.3315 * np.exp(-1.0672 / l_vals)
+
+    if cell_type == "Healthy":
+        alpha = 0.04  # High membrane resistance, almost pure negative feedback
+        feedback_mode = "Negative Feedback (Intact Cell Membrane)"
+    else:
+        alpha = 0.62  # Compromised membrane, permeable / conductive feedback
+        feedback_mode = "Permeable / Conductive Feedback (Compromised Membrane)"
+
+    i_norm_ideal = (1.0 - alpha) * i_neg + alpha * i_pos
+    noise = rng.normal(0, 0.015 * (1.0 + noise_level * 5.0), size=len(l_vals))
+    i_norm = np.clip(i_norm_ideal + noise, 0.1, 2.5)
+    i_abs = i_norm * i_bulk_na
+    d_um = l_vals * a_um
+
+    return {
+        "normalized_distance_l": l_vals.tolist(),
+        "distance_um": [round(float(x), 3) for x in d_um],
+        "normalized_current": [round(float(x), 4) for x in i_norm],
+        "current_na": [round(float(x), 3) for x in i_abs],
+        "feedback_mode": feedback_mode,
+        "probe_radius_um": a_um,
+        "bulk_current_na": i_bulk_na,
+        "min_normalized_current": round(float(np.min(i_norm)), 3),
+    }
+
+
+def simulate_secm_2d_surface_scan(
+    cell_type: str = "Healthy",
+    mask: Optional[np.ndarray] = None,
+    noise_level: float = 0.04,
+    seed: Optional[int] = None
+) -> Dict[str, Any]:
+    """Simulate a 2D spatial raster scan of probe Faradaic current across the single cell.
+
+    If a segmentation mask is provided, coregisters the localized current with the
+    microscopy morphology.
+    """
+    import cv2
+    rng = np.random.RandomState(seed)
+    n_pts = config.SECM_GRID_POINTS
+    scan_range = config.SECM_SCAN_RANGE_UM
+    i_bulk = config.SECM_BULK_CURRENT_NA
+
+    x_coords = np.linspace(-scan_range / 2.0, scan_range / 2.0, n_pts)
+    y_coords = np.linspace(-scan_range / 2.0, scan_range / 2.0, n_pts)
+
+    if mask is not None and mask.size > 0:
+        # Resize mask to n_pts x n_pts
+        mask_resized = cv2.resize(mask.astype(np.float32), (n_pts, n_pts), interpolation=cv2.INTER_AREA)
+        cell_weights = np.clip(mask_resized / 255.0, 0.0, 1.0)
+    else:
+        # Construct idealized cell shape
+        xx, yy = np.meshgrid(x_coords, y_coords)
+        r_sq = (xx / 4.8) ** 2 + (yy / 4.8) ** 2
+        cell_weights = np.clip(1.0 - np.clip(r_sq, 0.0, 1.0), 0.0, 1.0)
+
+    # Localized probe current calculation
+    if cell_type == "Healthy":
+        # Intact membrane strongly blocks mediator diffusion: current drops to ~3.5 nA
+        attenuation = 0.65
+        grid_current = i_bulk * (1.0 - cell_weights * attenuation)
+    else:
+        # Abnormal membrane has increased permeability and localized reactive hotspots
+        attenuation = 0.22
+        heterogeneity = rng.uniform(-0.15, 0.25, size=(n_pts, n_pts)) * cell_weights
+        grid_current = i_bulk * (1.0 - cell_weights * attenuation + heterogeneity)
+
+    noise = rng.normal(0, i_bulk * noise_level * 0.4, size=(n_pts, n_pts))
+    grid_current = np.clip(grid_current + noise, 1.0, 16.0)
+
+    i_min = float(np.min(grid_current))
+    i_max = float(np.max(grid_current))
+    contrast_pct = round(((i_max - i_min) / i_max) * 100.0, 1)
+
+    return {
+        "x_coords_um": [round(float(x), 2) for x in x_coords],
+        "y_coords_um": [round(float(y), 2) for y in y_coords],
+        "current_matrix_na": [[round(float(v), 2) for v in row] for row in grid_current],
+        "min_probe_current_na": round(i_min, 2),
+        "max_probe_current_na": round(i_max, 2),
+        "contrast_pct": contrast_pct,
+        "scan_area_um2": f"{scan_range} x {scan_range}",
+    }
+
+
+def simulate_differential_pulse_voltammetry(
+    cell_type: str = "Healthy",
+    noise_level: float = 0.04,
+    seed: Optional[int] = None
+) -> Dict[str, Any]:
+    """Simulate Differential Pulse Voltammetry (DPV) / Square Wave Voltammetry (SWV).
+
+    Produces high-sensitivity baseline-subtracted differential Faradaic current peaks.
+    """
+    rng = np.random.RandomState(seed)
+    potentials = np.arange(config.DPV_E_START, config.DPV_E_END, config.DPV_STEP_MV / 1000.0)
+
+    profile = config.ELECTROCHEMICAL_PROFILES.get(cell_type, config.ELECTROCHEMICAL_PROFILES["Healthy"])
+    peak_current_base = profile.get("dpv_peak_current_ua", 10.0)
+    delta_ep_v = float(rng.normal(profile["delta_ep_mean"], profile["delta_ep_std"])) / 1000.0
+    e_peak = 0.20 + (delta_ep_v / 4.0)
+
+    peak_current = float(rng.normal(peak_current_base, peak_current_base * 0.08))
+    sigma = 0.085
+
+    # Bell-shaped differential voltammetric peak
+    delta_i = peak_current / (np.cosh((potentials - e_peak) / (2.0 * sigma)) ** 2)
+    noise = rng.normal(0, max(0.08, peak_current * noise_level * 0.5), size=len(potentials))
+    dpv_current = np.clip(delta_i + noise, 0.0, 40.0)
+
+    return {
+        "potential_v": [round(float(e), 3) for e in potentials],
+        "delta_current_ua": [round(float(i), 3) for i in dpv_current],
+        "peak_potential_v": round(float(e_peak), 3),
+        "peak_current_ua": round(float(np.max(dpv_current)), 2),
+    }
+
+
+def simulate_chronoamperometry(
+    cell_type: str = "Healthy",
+    noise_level: float = 0.04,
+    seed: Optional[int] = None
+) -> Dict[str, Any]:
+    """Simulate Chronoamperometric current transient under potential step."""
+    rng = np.random.RandomState(seed)
+    t = np.linspace(0.02, config.CA_DURATION_SEC, config.CA_POINTS)
+
+    profile = config.ELECTROCHEMICAL_PROFILES.get(cell_type, config.ELECTROCHEMICAL_PROFILES["Healthy"])
+    i_diff_coeff = profile["ipa_mean"] * 1.8
+
+    # Cottrell diffusion decay: I(t) ~ t^(-0.5) + steady state + capacitive decay
+    cottrell = i_diff_coeff / np.sqrt(t)
+    cap_decay = 8.0 * np.exp(-t / 0.08)
+    i_ss = profile["ipa_mean"] * 0.25
+
+    noise = rng.normal(0, 0.15 * (1.0 + noise_level * 2.0), size=len(t))
+    current_transient = cottrell + cap_decay + i_ss + noise
+
+    return {
+        "time_sec": [round(float(ti), 3) for ti in t],
+        "current_ua": [round(float(ci), 3) for ci in current_transient],
+        "initial_current_ua": round(float(current_transient[0]), 2),
+        "steady_state_current_ua": round(float(np.mean(current_transient[-10:])), 2),
+    }
+
+
+def format_instrument_telemetry_csv(
+    sample_id: str,
+    cell_type: str,
+    cv_data: Dict[str, Any],
+    eis_data: Dict[str, Any],
+    secm_approach: Dict[str, Any],
+    dpv_data: Dict[str, Any],
+    ca_data: Dict[str, Any],
+) -> str:
+    """Format full multi-technique laboratory telemetry into a structured CSV string."""
+    from datetime import datetime
+    now_str = datetime.now().isoformat()
+
+    lines = [
+        "# ====================================================================",
+        "# CYTOBIOSCAN AI -- MULTIMODAL SINGLE-CELL ELECTROCHEMICAL WORKSTATION",
+        "# LABORATORY INSTRUMENT TELEMETRY EXPORT",
+        "# ====================================================================",
+        f"# Sample ID: {sample_id}",
+        f"# Membrane Condition: {cell_type}",
+        f"# Acquisition Timestamp: {now_str}",
+        f"# Working Electrode: Pt Microelectrode (radius = {config.SECM_PROBE_RADIUS_UM} um)",
+        "# Reference Electrode: Ag/AgCl (3.0 M KCl)",
+        "# Counter Electrode: Platinum Wire Auxiliary",
+        "# Supporting Electrolyte: 10 mM PBS pH 7.4 + 5.0 mM [Fe(CN)6]3-/4-",
+        "# Techniques: CV, EIS, SECM Approach, DPV, CA",
+        "# ====================================================================",
+        "",
+        "# --- [SECTION 1: CYCLIC VOLTAMMETRY (CV)] ---",
+        "# Potential_V,Current_uA",
+    ]
+    for p, c in zip(cv_data["potential_v"], cv_data["current_ua"]):
+        lines.append(f"{p:.4f},{c:.4f}")
+
+    lines.extend([
+        "",
+        "# --- [SECTION 2: ELECTROCHEMICAL IMPEDANCE SPECTROSCOPY (EIS)] ---",
+        "# Frequency_Hz,Z_Real_Ohm,Z_Imag_Ohm,Z_Mag_Ohm,Phase_Deg",
+    ])
+    for f, zr, zi, zm, ph in zip(
+        eis_data["frequency_hz"],
+        eis_data["z_real_ohm"],
+        eis_data["z_imag_ohm"],
+        eis_data["z_mag_ohm"],
+        eis_data["phase_deg"],
+    ):
+        lines.append(f"{f:.4e},{zr:.3f},{zi:.3f},{zm:.3f},{ph:.2f}")
+
+    lines.extend([
+        "",
+        "# --- [SECTION 3: SECM APPROACH CURVE (L = d/a)] ---",
+        "# Normalized_L,Distance_um,Normalized_Current_IT,Current_nA",
+    ])
+    for l, d, it, ina in zip(
+        secm_approach["normalized_distance_l"],
+        secm_approach["distance_um"],
+        secm_approach["normalized_current"],
+        secm_approach["current_na"],
+    ):
+        lines.append(f"{l:.3f},{d:.3f},{it:.4f},{ina:.3f}")
+
+    lines.extend([
+        "",
+        "# --- [SECTION 4: DIFFERENTIAL PULSE VOLTAMMETRY (DPV)] ---",
+        "# Potential_V,Delta_Current_uA",
+    ])
+    for p, di in zip(dpv_data["potential_v"], dpv_data["delta_current_ua"]):
+        lines.append(f"{p:.4f},{di:.4f}")
+
+    lines.extend([
+        "",
+        "# --- [SECTION 5: CHRONOAMPEROMETRY (CA)] ---",
+        "# Time_s,Current_uA",
+    ])
+    for t, c in zip(ca_data["time_sec"], ca_data["current_ua"]):
+        lines.append(f"{t:.4f},{c:.4f}")
+
+    return "\n".join(lines)
 
 
 def extract_sensor_features(cv_data: Dict[str, Any], eis_data: Dict[str, Any]) -> Dict[str, float]:

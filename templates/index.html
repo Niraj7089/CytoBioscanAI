@@ -300,26 +300,35 @@
 
                 <hr class="border-slate-300">
 
-                <!-- Tabs: Image Processing vs Electrochemical Signatures -->
+                <!-- Tabs: Multi-Technique Workstation Navigation -->
                 <div class="border-b border-slate-200">
-                    <nav class="flex space-x-6 text-sm font-bold">
-                        <button onclick="switchResultTab('tab-img')" id="btn-tab-img" class="pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2">
-                            <span>🖼️ Image Processing &amp; Segmentation</span>
+                    <nav class="flex space-x-6 text-xs sm:text-sm font-bold overflow-x-auto pb-1">
+                        <button onclick="switchResultTab('tab-img')" id="btn-tab-img" class="pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2 whitespace-nowrap">
+                            <span>🔬 Microscopy &amp; Segmentation</span>
                         </button>
-                        <button onclick="switchResultTab('tab-sensor')" id="btn-tab-sensor" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2">
-                            <span>⚡ Electrochemical Signatures</span>
+                        <button onclick="switchResultTab('tab-secm')" id="btn-tab-secm" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap">
+                            <span>🌐 Scanning Probe (SECM)</span>
+                        </button>
+                        <button onclick="switchResultTab('tab-voltammetry')" id="btn-tab-voltammetry" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap">
+                            <span>⚡ Voltammetry (CV &amp; DPV)</span>
+                        </button>
+                        <button onclick="switchResultTab('tab-eis')" id="btn-tab-eis" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap">
+                            <span>📈 Impedance (EIS)</span>
+                        </button>
+                        <button onclick="switchResultTab('tab-ca')" id="btn-tab-ca" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap">
+                            <span>⏱️ Chronoamperometry (CA)</span>
                         </button>
                     </nav>
                 </div>
 
-                <!-- Tab 1: Image Processing & Segmentation (3 columns) -->
+                <!-- Tab 1: Optical Microscopy & Segmentation -->
                 <div id="content-tab-img" class="space-y-4 pt-2">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="space-y-1 text-center">
                             <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
                                 <img id="res-img-raw" src="" class="w-full aspect-square object-cover rounded">
                             </div>
-                            <span class="text-xs font-medium text-slate-600">Raw Microscopic Cell</span>
+                            <span class="text-xs font-medium text-slate-600">Raw Optical Micrograph</span>
                         </div>
                         <div class="space-y-1 text-center">
                             <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
@@ -331,38 +340,113 @@
                             <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
                                 <img id="res-img-overlay" src="" class="w-full aspect-square object-cover rounded">
                             </div>
-                            <span class="text-xs font-medium text-slate-600">Segmented Cell &amp; Boundary Outline</span>
+                            <span class="text-xs font-medium text-slate-600">Morphological Boundary Outline</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tab 2: Electrochemical Signatures (Dual-panel charts) -->
-                <div id="content-tab-sensor" class="hidden space-y-4 pt-2">
+                <!-- Tab 2: Scanning Electrochemical Microscopy (e-SPM / SECM) -->
+                <div id="content-tab-secm" class="hidden space-y-4 pt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- SECM 2D Localized Reactivity Raster -->
+                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h5 class="text-xs font-bold text-slate-800">2D SECM Faradaic Current Topography</h5>
+                                <span id="secm-contrast-badge" class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Contrast: --%</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <canvas id="canvas-secm-heatmap" width="240" height="240" class="border border-slate-300 rounded shadow-inner"></canvas>
+                                <div class="w-full max-w-xs flex items-center justify-between text-[10px] text-slate-500 font-mono mt-1">
+                                    <span>-10 µm (X)</span>
+                                    <span>0</span>
+                                    <span>+10 µm</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1 border-t border-slate-100">
+                                <div><span class="text-[10px] text-slate-400 block">Min Current</span><strong id="secm-min-curr" class="text-slate-800 font-mono">-- nA</strong></div>
+                                <div><span class="text-[10px] text-slate-400 block">Bulk I_inf</span><strong class="text-slate-800 font-mono">10.0 nA</strong></div>
+                                <div><span class="text-[10px] text-slate-400 block">Raster Grid</span><strong class="text-slate-800 font-mono">25 × 25</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- SECM Approach Curve -->
+                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm space-y-2">
+                            <div class="flex items-center justify-between mb-1">
+                                <h5 class="text-xs font-bold text-slate-800">SECM Approach Curve (I/I_inf vs d/a)</h5>
+                                <span id="secm-feedback-badge" class="text-[10px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Feedback: --</span>
+                            </div>
+                            <div class="h-56">
+                                <canvas id="chart-secm-approach"></canvas>
+                            </div>
+                            <p class="text-[10px] text-slate-500 italic text-center">Pt microelectrode (a = 1.0 µm) approaching single erythrocyte membrane.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Voltammetry Suite (CV & DPV) -->
+                <div id="content-tab-voltammetry" class="hidden space-y-4 pt-2">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
-                            <h5 class="text-xs font-bold text-slate-800 text-center mb-2">Cyclic Voltammogram (CV)</h5>
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-bold text-slate-800">Cyclic Voltammogram (CV)</h5>
+                                <span id="cv-peaks-badge" class="text-[10px] text-slate-500 font-mono">ΔEp: -- mV</span>
+                            </div>
                             <div class="h-56">
                                 <canvas id="chart-cv"></canvas>
                             </div>
                         </div>
                         <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
-                            <h5 class="text-xs font-bold text-slate-800 text-center mb-2">EIS Nyquist Spectrum (-Z'' vs Z')</h5>
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-bold text-slate-800">Differential Pulse Voltammetry (DPV)</h5>
+                                <span id="dpv-peak-badge" class="text-[10px] text-slate-500 font-mono">ΔIp: -- µA</span>
+                            </div>
+                            <div class="h-56">
+                                <canvas id="chart-dpv"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Impedance Spectroscopy (EIS) -->
+                <div id="content-tab-eis" class="hidden space-y-4 pt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                            <h5 class="text-xs font-bold text-slate-800 text-center mb-2">Nyquist Complex Spectrum (-Z'' vs Z')</h5>
                             <div class="h-56">
                                 <canvas id="chart-eis"></canvas>
                             </div>
+                        </div>
+                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                            <h5 class="text-xs font-bold text-slate-800 text-center mb-2">Bode Spectrum (|Z| &amp; Phase Angle vs log f)</h5>
+                            <div class="h-56">
+                                <canvas id="chart-bode"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Chronoamperometry (CA) -->
+                <div id="content-tab-ca" class="hidden space-y-4 pt-2">
+                    <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <h5 class="text-xs font-bold text-slate-800">Cottrell Chronoamperometric Transient (I vs t)</h5>
+                            <span class="text-[10px] text-slate-500 font-mono">Step Potential: +0.40 V</span>
+                        </div>
+                        <div class="h-60">
+                            <canvas id="chart-ca"></canvas>
                         </div>
                     </div>
                 </div>
 
                 <!-- Quantitative Breakdown Tables (2 columns side-by-side) -->
                 <div class="pt-4 space-y-2">
-                    <h4 class="text-sm font-bold text-slate-900">Quantitative Multimodal Biomarkers</h4>
+                    <h4 class="text-sm font-bold text-slate-900">Quantitative Multimodal &amp; Instrument Biomarkers</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                         <!-- Left Table: Morphological & Texture -->
                         <div class="bg-white border border-slate-300 rounded overflow-hidden shadow-sm">
                             <div class="bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 border-b border-slate-300">
-                                Morphological &amp; Texture Descriptors
+                                Morphological &amp; Optical Descriptors
                             </div>
                             <table class="w-full text-xs text-left">
                                 <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
@@ -374,14 +458,14 @@
                             </table>
                         </div>
 
-                        <!-- Right Table: Electrochemical Sensor -->
+                        <!-- Right Table: Electrochemical & Scanning Probe Sensor -->
                         <div class="bg-white border border-slate-300 rounded overflow-hidden shadow-sm">
                             <div class="bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 border-b border-slate-300">
-                                Electrochemical Sensor Descriptors
+                                Electrochemical &amp; Scanning Probe Parameters
                             </div>
                             <table class="w-full text-xs text-left">
                                 <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
-                                    <tr><th class="py-1.5 px-3">Biomarker</th><th class="py-1.5 px-3 text-right">Value</th></tr>
+                                    <tr><th class="py-1.5 px-3">Parameter</th><th class="py-1.5 px-3 text-right">Value</th></tr>
                                 </thead>
                                 <tbody id="table-sensor-metrics" class="divide-y divide-slate-100 text-slate-700 font-mono">
                                     <!-- Populated dynamically -->
@@ -391,12 +475,17 @@
                     </div>
                 </div>
 
-                <!-- Download Report Button -->
+                <!-- Download Report & Telemetry Buttons -->
                 <div class="pt-4 space-y-2">
-                    <h4 class="text-sm font-bold text-slate-900">Export Documentation</h4>
-                    <a id="btn-download-pdf-report" href="#" target="_blank" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded text-sm font-semibold transition shadow-sm">
-                        <span>📄 Download Official PDF Research Report</span>
-                    </a>
+                    <h4 class="text-sm font-bold text-slate-900">Laboratory Data Export</h4>
+                    <div class="flex flex-wrap gap-4">
+                        <a id="btn-download-pdf-report" href="#" target="_blank" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded text-sm font-semibold transition shadow-sm">
+                            <span>📄 Download Official PDF Research Report</span>
+                        </a>
+                        <a id="btn-download-telemetry" href="#" target="_blank" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-white hover:bg-slate-50 text-emerald-700 border border-emerald-300 rounded text-sm font-semibold transition shadow-sm">
+                            <span>💾 Download Laboratory Telemetry (CSV)</span>
+                        </a>
+                    </div>
                 </div>
 
             </div>
@@ -522,7 +611,11 @@
         let uploadedImageFile = null;
         let uploadedSensorFile = null;
         let chartCvInstance = null;
+        let chartDpvInstance = null;
         let chartEisInstance = null;
+        let chartBodeInstance = null;
+        let chartSecmAppInstance = null;
+        let chartCaInstance = null;
 
         // Initialize on load
         window.addEventListener('DOMContentLoaded', () => {
@@ -629,17 +722,19 @@
         }
 
         function switchResultTab(tabName) {
-            if (tabName === 'tab-img') {
-                document.getElementById('content-tab-img').classList.remove('hidden');
-                document.getElementById('content-tab-sensor').classList.add('hidden');
-                document.getElementById('btn-tab-img').className = "pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2";
-                document.getElementById('btn-tab-sensor').className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2";
-            } else {
-                document.getElementById('content-tab-img').classList.add('hidden');
-                document.getElementById('content-tab-sensor').classList.remove('hidden');
-                document.getElementById('btn-tab-img').className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2";
-                document.getElementById('btn-tab-sensor').className = "pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2";
-            }
+            const tabs = ['tab-img', 'tab-secm', 'tab-voltammetry', 'tab-eis', 'tab-ca'];
+            tabs.forEach(t => {
+                const content = document.getElementById(`content-${t}`);
+                const btn = document.getElementById(`btn-${t}`);
+                if (!content || !btn) return;
+                if (t === tabName) {
+                    content.classList.remove('hidden');
+                    btn.className = "pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2 whitespace-nowrap";
+                } else {
+                    content.classList.add('hidden');
+                    btn.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap";
+                }
+            });
         }
 
         async function executeAnalysis() {
@@ -735,20 +830,46 @@
 
             document.getElementById('table-sensor-metrics').innerHTML = `
                 <tr><td class="py-1.5 px-3">Peak Anodic Current (Ipa)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.peak_anodic_current} µA</td></tr>
+                <tr><td class="py-1.5 px-3">Peak Cathodic Current (Ipc)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.peak_cathodic_current} µA</td></tr>
+                <tr><td class="py-1.5 px-3">Peak Separation (ΔEp)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.delta_peak_potential} mV</td></tr>
                 <tr><td class="py-1.5 px-3">Charge Transfer Res. (Rct)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.charge_transfer_resistance} Ω</td></tr>
                 <tr><td class="py-1.5 px-3">Capacitance (Cdl)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.double_layer_capacitance_uf} µF</td></tr>
-                <tr><td class="py-1.5 px-3">Peak Separation (ΔEp)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.delta_peak_potential} mV</td></tr>
+                <tr><td class="py-1.5 px-3">Solution Res. (Rs)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.solution_resistance} Ω</td></tr>
                 <tr><td class="py-1.5 px-3">Impedance |Z| at 1 Hz</td><td class="py-1.5 px-3 text-right">${data.sensor_features.impedance_low_freq} Ω</td></tr>
+                <tr><td class="py-1.5 px-3">Peak Phase Angle (θ_min)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.min_phase_angle}°</td></tr>
+                <tr><td class="py-1.5 px-3">SECM Min Local Current</td><td class="py-1.5 px-3 text-right">${data.secm_data ? data.secm_data.surface_2d.min_probe_current_na : '-'} nA</td></tr>
+                <tr><td class="py-1.5 px-3">DPV Peak Differential</td><td class="py-1.5 px-3 text-right">${data.dpv_data ? data.dpv_data.peak_current_ua : '-'} µA</td></tr>
             `;
+
+            // Technique Badges
+            if (data.cv_data) {
+                document.getElementById('cv-peaks-badge').innerText = `ΔEp: ${data.cv_data.delta_ep} mV`;
+            }
+            if (data.dpv_data) {
+                document.getElementById('dpv-peak-badge').innerText = `ΔIp: ${data.dpv_data.peak_current_ua} µA`;
+            }
+            if (data.secm_data) {
+                document.getElementById('secm-feedback-badge').innerText = data.secm_data.approach.feedback_mode;
+                document.getElementById('secm-contrast-badge').innerText = `Contrast: ${data.secm_data.surface_2d.contrast_pct}%`;
+                document.getElementById('secm-min-curr').innerText = `${data.secm_data.surface_2d.min_probe_current_na} nA`;
+            }
 
             // 7. Render Charts
             drawCVChart(data.cv_data);
+            if (data.dpv_data) drawDPVChart(data.dpv_data);
             drawEISChart(data.eis_data);
+            if (data.eis_data) drawBodeChart(data.eis_data);
+            if (data.secm_data) {
+                drawSecmApproachChart(data.secm_data.approach);
+                drawSecm2DHeatmap(data.secm_data.surface_2d);
+            }
+            if (data.ca_data) drawCAChart(data.ca_data);
 
-            // 8. PDF Download Button
+            // 8. Action Buttons
             if (data.report_filename) {
                 document.getElementById('btn-download-pdf-report').href = `/api/download-report/${data.report_filename}`;
             }
+            document.getElementById('btn-download-telemetry').href = `/api/download-telemetry/${data.sample_id}`;
 
             // Scroll down smoothly
             results.scrollIntoView({ behavior: 'smooth' });
@@ -784,6 +905,37 @@
             });
         }
 
+        function drawDPVChart(dpv) {
+            const ctx = document.getElementById('chart-dpv').getContext('2d');
+            if (chartDpvInstance) chartDpvInstance.destroy();
+
+            chartDpvInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dpv.potential_v.map(v => v.toFixed(2)),
+                    datasets: [{
+                        label: 'Differential Current (µA)',
+                        data: dpv.delta_current_ua,
+                        borderColor: '#d97706',
+                        backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { title: { display: true, text: 'Potential vs. Ref (V)', font: { size: 10 } } },
+                        y: { title: { display: true, text: 'ΔCurrent (µA)', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
         function drawEISChart(eis) {
             const ctx = document.getElementById('chart-eis').getContext('2d');
             if (chartEisInstance) chartEisInstance.destroy();
@@ -800,7 +952,7 @@
                         backgroundColor: '#800080',
                         showLine: true,
                         borderWidth: 1.5,
-                        pointRadius: 3
+                        pointRadius: 2.5
                     }]
                 },
                 options: {
@@ -810,6 +962,161 @@
                     scales: {
                         x: { title: { display: true, text: "Z' Real (Ω)", font: { size: 10 } } },
                         y: { title: { display: true, text: "-Z'' Imaginary (Ω)", font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function drawBodeChart(eis) {
+            const ctx = document.getElementById('chart-bode').getContext('2d');
+            if (chartBodeInstance) chartBodeInstance.destroy();
+
+            const labels = eis.frequency_hz.map(f => f >= 1000 ? (f/1000).toFixed(0) + 'k' : f.toFixed(0));
+
+            chartBodeInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '|Z| (Ω)',
+                            data: eis.z_mag_ohm,
+                            borderColor: '#2563eb',
+                            borderWidth: 1.8,
+                            pointRadius: 0,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Phase (°)',
+                            data: eis.phase_deg,
+                            borderColor: '#9333ea',
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            pointRadius: 0,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 9 } } } },
+                    scales: {
+                        x: { title: { display: true, text: 'Frequency (Hz)', font: { size: 10 } } },
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: '|Z| (Ω)', font: { size: 10 } } },
+                        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Phase (°)', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function drawSecmApproachChart(app) {
+            const ctx = document.getElementById('chart-secm-approach').getContext('2d');
+            if (chartSecmAppInstance) chartSecmAppInstance.destroy();
+
+            const isNegative = app.feedback_mode.includes('Negative');
+
+            chartSecmAppInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: app.distance_um.map(d => d.toFixed(1)),
+                    datasets: [{
+                        label: 'I / I_inf',
+                        data: app.normalized_current,
+                        borderColor: isNegative ? '#059669' : '#dc2626',
+                        backgroundColor: isNegative ? 'rgba(5, 150, 105, 0.1)' : 'rgba(220, 38, 38, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1.5,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { reverse: true, title: { display: true, text: 'Tip Distance d (µm)', font: { size: 10 } } },
+                        y: { title: { display: true, text: 'Normalized Current I_T', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function drawSecm2DHeatmap(surf) {
+            const canvas = document.getElementById('canvas-secm-heatmap');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const matrix = surf.current_matrix_na;
+            const rows = matrix.length;
+            const cols = matrix[0].length;
+            const cellW = canvas.width / cols;
+            const cellH = canvas.height / rows;
+
+            const minI = surf.min_probe_current_na;
+            const maxI = surf.max_probe_current_na;
+            const range = Math.max(0.1, maxI - minI);
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const val = matrix[r][c];
+                    const norm = Math.min(1.0, Math.max(0.0, (val - minI) / range));
+                    // Viridis-like scientific color gradient
+                    let red, green, blue;
+                    if (norm < 0.5) {
+                        const t = norm / 0.5;
+                        red = Math.round(48 + t * (26 - 48));
+                        green = Math.round(18 + t * (150 - 18));
+                        blue = Math.round(59 + t * (110 - 59));
+                    } else {
+                        const t = (norm - 0.5) / 0.5;
+                        red = Math.round(26 + t * (240 - 26));
+                        green = Math.round(150 + t * (249 - 150));
+                        blue = Math.round(110 + t * (33 - 110));
+                    }
+                    ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+                    ctx.fillRect(c * cellW, r * cellH, cellW + 0.5, cellH + 0.5);
+                }
+            }
+
+            // Draw center coordinate crosshair
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function drawCAChart(ca) {
+            const ctx = document.getElementById('chart-ca').getContext('2d');
+            if (chartCaInstance) chartCaInstance.destroy();
+
+            chartCaInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ca.time_sec.map(t => t.toFixed(2)),
+                    datasets: [{
+                        label: 'Transient Current (µA)',
+                        data: ca.current_ua,
+                        borderColor: '#0284c7',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { title: { display: true, text: 'Time t (s)', font: { size: 10 } } },
+                        y: { title: { display: true, text: 'Current (µA)', font: { size: 10 } } }
                     }
                 }
             });
