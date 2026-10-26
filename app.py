@@ -79,6 +79,11 @@ def setup_database_once():
     init_db()
 
 
+@app.route("/favicon.ico")
+def favicon():
+    return Response(status=204)
+
+
 @app.route("/")
 def index():
     """Render the main interactive diagnostic studio dashboard."""
@@ -379,9 +384,9 @@ if __name__ == "__main__":
 
     def run_port_5000():
         try:
-            run_simple("127.0.0.1", 5000, app, use_reloader=False)
-        except Exception:
-            pass
+            run_simple("0.0.0.0", 5000, app, threaded=True, use_reloader=False)
+        except Exception as e:
+            print("Port 5000 error:", e)
 
     # Launch dual listener on port 5000 in background
     t = threading.Thread(target=run_port_5000, daemon=True)
@@ -393,4 +398,4 @@ if __name__ == "__main__":
     print(" * Primary URL (Your existing browser tab): http://localhost:8501")
     print(" * Secondary URL (Standard Flask port):     http://localhost:5000")
     print("=" * 70)
-    run_simple("127.0.0.1", 8501, app, use_reloader=False)
+    run_simple("0.0.0.0", 8501, app, threaded=True, use_reloader=False)
