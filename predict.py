@@ -181,7 +181,8 @@ def main():
     if result["pdf_report_path"]:
         print(f"Report Generated: {result['pdf_report_path']}")
     print("=" * 50)
-    print(f"Notice: {result['disclaimer']}\n")
+    if result.get("disclaimer"):
+        print(f"Notice: {result['disclaimer']}\n")
 
 
 if __name__ == "__main__":

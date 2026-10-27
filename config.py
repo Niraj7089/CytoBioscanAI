@@ -136,9 +136,5 @@ ELECTROCHEMICAL_PROFILES = {
     }
 }
 
-# Scientific Disclaimer
-DISCLAIMER_TEXT = (
-    "RESEARCH PROTOTYPE NOTICE: This system is developed strictly for research, educational, "
-    "and computational evaluation purposes. It is not an FDA-cleared medical device and must not "
-    "be used as a clinical diagnostic tool or to guide medical treatments."
-)
+# Scientific Metadata
+DISCLAIMER_TEXT = ""

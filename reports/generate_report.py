@@ -115,18 +115,19 @@ def generate_pdf_report(
     story.append(Spacer(1, 8))
     story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#0D3B66"), spaceAfter=10))
 
-    # Prominent Research Disclaimer Box
-    disclaimer_table = Table(
-        [[Paragraph(f"<b>CAUTION — RESEARCH PROTOTYPE:</b> {config.DISCLAIMER_TEXT}", disclaimer_style)]],
-        colWidths=[532],
-    )
-    disclaimer_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF8E7")),
-        ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#F4D06F")),
-        ("PADDING", (0, 0), (-1, -1), 8),
-    ]))
-    story.append(disclaimer_table)
-    story.append(Spacer(1, 10))
+    # Disclaimer Box (only if configured)
+    if config.DISCLAIMER_TEXT:
+        disclaimer_table = Table(
+            [[Paragraph(f"<b>CAUTION:</b> {config.DISCLAIMER_TEXT}", disclaimer_style)]],
+            colWidths=[532],
+        )
+        disclaimer_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF8E7")),
+            ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#F4D06F")),
+            ("PADDING", (0, 0), (-1, -1), 8),
+        ]))
+        story.append(disclaimer_table)
+        story.append(Spacer(1, 10))
 
     # Specimen & Metadata Table
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
