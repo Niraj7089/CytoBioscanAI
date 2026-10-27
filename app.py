@@ -321,7 +321,9 @@ def serve_report_file(filename):
     """Serve evaluation static plots (confusion matrix, ROC curve)."""
     safe_filename = Path(filename).name
     target = (config.REPORTS_DIR / safe_filename).resolve()
-    if not target.exists() or not str(target).startswith(str(config.REPORTS_DIR)):
+    if not target.exists():
+        target = (config.STATIC_REPORTS_DIR / safe_filename).resolve()
+    if not target.exists():
         return "File not found", 404
     return send_file(target)
 
@@ -331,8 +333,9 @@ def download_report(filename):
     """Download generated clinical research PDF report."""
     safe_filename = Path(filename).name
     report_file = (config.REPORTS_DIR / safe_filename).resolve()
-
-    if not report_file.exists() or not str(report_file).startswith(str(config.REPORTS_DIR)):
+    if not report_file.exists():
+        report_file = (config.STATIC_REPORTS_DIR / safe_filename).resolve()
+    if not report_file.exists():
         return "Report file not found", 404
 
     return send_file(report_file, mimetype="application/pdf", as_attachment=True, download_name=safe_filename)

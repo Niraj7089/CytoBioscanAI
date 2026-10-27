@@ -4,6 +4,8 @@ This module consolidates all file paths, model hyperparameters, image processing
 parameters, and electrochemical simulation constants.
 """
 
+import os
+import tempfile
 from pathlib import Path
 
 # Scientific & Instrumentation Metadata
@@ -20,7 +22,18 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 SENSOR_DATA_DIR = DATA_DIR / "sensor"
 MODELS_DIR = BASE_DIR / "models"
-REPORTS_DIR = BASE_DIR / "reports"
+STATIC_REPORTS_DIR = BASE_DIR / "reports"
+
+# Detect serverless environment (Vercel, AWS Lambda) where filesystem is read-only except /tmp
+IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+TMP_DIR = Path(tempfile.gettempdir())
+
+if IS_SERVERLESS:
+    DB_PATH = TMP_DIR / "predictions.db"
+    REPORTS_DIR = TMP_DIR / "reports"
+else:
+    DB_PATH = DATA_DIR / "predictions.db"
+    REPORTS_DIR = STATIC_REPORTS_DIR
 
 # Sub-dataset paths
 TRAIN_DIR = RAW_DATA_DIR / "train"
@@ -28,7 +41,6 @@ VALID_DIR = RAW_DATA_DIR / "valid"
 TEST_DIR = RAW_DATA_DIR / "test"
 
 # Database and Model Artifacts
-DB_PATH = DATA_DIR / "predictions.db"
 IMAGE_MODEL_PATH = MODELS_DIR / "image_model.keras"
 FUSION_MODEL_PATH = MODELS_DIR / "fusion_model.pkl"
 SCALER_PATH = MODELS_DIR / "feature_scaler.pkl"

@@ -9,12 +9,25 @@ import pandas as pd
 import config
 
 
+import tempfile
+
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
-    """Get SQLite database connection, ensuring parent directory exists."""
+    """Get SQLite database connection, ensuring parent directory exists with serverless fallback."""
     if db_path is None:
         db_path = config.DB_PATH
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path))
+
+    try:
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(db_path))
+    except (OSError, PermissionError, sqlite3.OperationalError):
+        # Fallback to temp directory or in-memory database in read-only serverless runtimes
+        fallback_dir = Path(tempfile.gettempdir())
+        try:
+            fallback_path = fallback_dir / "predictions.db"
+            conn = sqlite3.connect(str(fallback_path))
+        except Exception:
+            conn = sqlite3.connect(":memory:")
+
     conn.row_factory = sqlite3.Row
     return conn
 

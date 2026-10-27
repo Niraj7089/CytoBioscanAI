@@ -1,29 +1,24 @@
-# AI-Assisted Single-Cell Imaging and Electrochemical Detection System
-# Core Dependencies
+# CytoBioScan AI — Core Dependencies (Vercel & Production Optimized)
 
-# Computer Vision & Image Processing
-opencv-python>=4.9.0
+# Web Application Framework
+flask>=3.0.0
+
+# Computer Vision & Image Processing (Cloud Headless)
+opencv-python-headless>=4.9.0.80
 pillow>=10.0.0
 
-# Deep Learning & Machine Learning
-tensorflow>=2.15.0
-keras>=3.0.0
+# Multimodal Machine Learning & Feature Fusion
 scikit-learn>=1.4.0
 joblib>=1.3.0
 
-# Data Manipulation & Scientific Computing
+# Scientific Computing & Data Processing
 numpy>=1.24.0
 pandas>=2.0.0
 scipy>=1.12.0
 
-# Data Visualization
+# Visualization & Reporting
 matplotlib>=3.8.0
-
-# Interactive Dashboard & Web Application
-flask>=3.0.0
-
-# Medical / Diagnostic PDF Report Generation
 reportlab>=4.0.0
 
-# Unit & Integration Testing
+# Testing
 pytest>=8.0.0

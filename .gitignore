@@ -26,10 +26,16 @@ wheels/
 
 # Virtual environments
 .env
+.env.*
+!.env.example
 .venv
+.venv/
 env/
 venv/
 ENV/
+
+# Vercel deployment artifacts
+.vercel/
 
 # Pytest / coverage
 .pytest_cache/
@@ -48,3 +54,9 @@ Thumbs.db
 # Large temporary datasets (keep raw sample folder structures)
 data/temp.zip
 data/raw_temp.zip
+
+# Runtime temporary generated files
+reports/Diagnosis_Report_*.pdf
+*.db-journal
+temp/
+uploads/
