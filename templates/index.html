@@ -164,12 +164,13 @@
                     <!-- Mode B: Upload Image -->
                     <div id="box-image-upload" class="hidden space-y-2 pt-2">
                         <label class="block text-xs font-bold text-slate-700">Upload Single-Cell Micrograph</label>
-                        <div class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-lg p-5 text-center cursor-pointer bg-white relative">
-                            <input type="file" id="upload-cell-file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFileUpload(event)">
-                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-2"></i>
-                            <p class="text-xs text-slate-600 font-semibold">Drag and drop file here</p>
-                            <p class="text-[11px] text-slate-400">Limit 200MB per file • PNG, JPG, JPEG</p>
+                        <div id="drop-zone-image" onclick="document.getElementById('upload-cell-file').click()" class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-lg p-5 text-center cursor-pointer bg-white transition hover:bg-slate-50">
+                            <input type="file" id="upload-cell-file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+                            <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
+                            <p class="text-xs text-slate-700 font-semibold">Click to browse or drag &amp; drop micrograph here</p>
+                            <p class="text-[11px] text-slate-400 mt-1">Accepts PNG, JPG, JPEG, TIFF, BMP</p>
                         </div>
+                        <div id="upload-image-status" class="min-h-[22px]"></div>
                     </div>
 
                     <!-- Selected Image Preview -->
@@ -228,11 +229,11 @@
                     <!-- Mode B: Upload Sensor CSV -->
                     <div id="box-sensor-csv" class="hidden space-y-2 pt-2">
                         <label class="block text-xs font-bold text-slate-700">Upload Sensor Measurement CSV</label>
-                        <div class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-lg p-5 text-center cursor-pointer bg-white relative">
-                            <input type="file" id="upload-sensor-file" accept=".csv" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleCsvUpload(event)">
-                            <i class="fa-solid fa-file-csv text-2xl text-emerald-600 mb-2"></i>
-                            <p class="text-xs text-slate-600 font-semibold">Drag and drop CSV here</p>
-                            <p id="sensor-csv-name" class="text-[11px] text-slate-400">CSV with peak_anodic_current, rct, etc.</p>
+                        <div id="drop-zone-csv" onclick="document.getElementById('upload-sensor-file').click()" class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-lg p-5 text-center cursor-pointer bg-white transition hover:bg-slate-50">
+                            <input type="file" id="upload-sensor-file" accept=".csv" class="hidden" onchange="handleCsvUpload(event)">
+                            <i class="fa-solid fa-file-csv text-3xl text-emerald-600 mb-2"></i>
+                            <p class="text-xs text-slate-700 font-semibold">Click to browse or drag &amp; drop CSV here</p>
+                            <p id="sensor-csv-name" class="text-[11px] text-slate-400 mt-1">CSV with peak_anodic_current, rct, etc.</p>
                         </div>
                     </div>
                 </div>
@@ -243,6 +244,14 @@
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Analyst Observations / Study Notes:</label>
                 <input type="text" id="input-notes" placeholder="E.g., In-vitro assay batch #4, 37°C incubation." class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+            </div>
+
+            <!-- Active Specimen Banner -->
+            <div id="active-specimen-banner" class="flex items-center justify-between text-xs px-3 py-2 rounded bg-slate-100 border border-slate-200">
+                <span class="flex items-center text-slate-600 font-semibold">
+                    <i class="fa-solid fa-microscope text-red-500 mr-2"></i> Ready Specimen:
+                </span>
+                <span id="active-specimen-label" class="font-mono text-slate-800 font-medium truncate max-w-sm">Initializing sample library...</span>
             </div>
 
             <!-- Big Action Button -->
@@ -609,8 +618,69 @@
 
         // Initialize on load
         window.addEventListener('DOMContentLoaded', () => {
+            initDragAndDrop();
             onClassChange();
         });
+
+        function updateSpecimenStatusBanner(text, isReady = true) {
+            const label = document.getElementById('active-specimen-label');
+            if (!label) return;
+            if (isReady) {
+                label.innerHTML = `<span class="text-emerald-700 font-semibold"><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> ${text}</span>`;
+            } else {
+                label.innerHTML = `<span class="text-amber-600 font-medium"><i class="fa-solid fa-triangle-exclamation mr-1 text-amber-500"></i> ${text}</span>`;
+            }
+        }
+
+        function initDragAndDrop() {
+            // Micrograph Drop Zone
+            const imgDrop = document.getElementById('drop-zone-image');
+            if (imgDrop) {
+                ['dragenter', 'dragover'].forEach(name => {
+                    imgDrop.addEventListener(name, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        imgDrop.classList.add('border-red-500', 'bg-red-50');
+                    });
+                });
+                ['dragleave', 'drop'].forEach(name => {
+                    imgDrop.addEventListener(name, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        imgDrop.classList.remove('border-red-500', 'bg-red-50');
+                    });
+                });
+                imgDrop.addEventListener('drop', (e) => {
+                    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        processSelectedImageFile(e.dataTransfer.files[0]);
+                    }
+                });
+            }
+
+            // CSV Drop Zone
+            const csvDrop = document.getElementById('drop-zone-csv');
+            if (csvDrop) {
+                ['dragenter', 'dragover'].forEach(name => {
+                    csvDrop.addEventListener(name, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        csvDrop.classList.add('border-emerald-500', 'bg-emerald-50');
+                    });
+                });
+                ['dragleave', 'drop'].forEach(name => {
+                    csvDrop.addEventListener(name, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        csvDrop.classList.remove('border-emerald-500', 'bg-emerald-50');
+                    });
+                });
+                csvDrop.addEventListener('drop', (e) => {
+                    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        processSelectedCsvFile(e.dataTransfer.files[0]);
+                    }
+                });
+            }
+        }
 
         function switchModule(mod) {
             ['analysis', 'history', 'specs'].forEach(m => {
@@ -634,8 +704,13 @@
                 document.getElementById('box-image-library').classList.add('hidden');
                 document.getElementById('box-image-upload').classList.remove('hidden');
                 selectedPresetPath = null;
-                document.getElementById('input-preview-img').src = '';
-                document.getElementById('input-preview-label').innerText = 'No file selected';
+                if (uploadedImageFile) {
+                    processSelectedImageFile(uploadedImageFile);
+                } else {
+                    document.getElementById('input-preview-img').src = '';
+                    document.getElementById('input-preview-label').innerText = 'No file selected';
+                    updateSpecimenStatusBanner('Please upload a cell micrograph file', false);
+                }
             }
         }
 
@@ -662,7 +737,7 @@
 
                 const select = document.getElementById('select-sample-file');
                 select.innerHTML = '';
-                currentSampleList.forEach((s, idx) => {
+                currentSampleList.forEach((s) => {
                     const opt = document.createElement('option');
                     opt.value = s.path;
                     opt.innerText = s.name;
@@ -671,14 +746,21 @@
 
                 if (currentSampleList.length > 0) {
                     onSampleChange();
+                } else {
+                    updateSpecimenStatusBanner('No benchmark samples found in repository', false);
                 }
             } catch (err) {
                 console.error('Failed to load samples:', err);
+                updateSpecimenStatusBanner('Error connecting to sample repository', false);
             }
         }
 
         function onSampleChange() {
             const select = document.getElementById('select-sample-file');
+            if (!select || !select.value) {
+                updateSpecimenStatusBanner('Please select a benchmark cell sample', false);
+                return;
+            }
             selectedPresetPath = select.value;
             uploadedImageFile = null;
 
@@ -686,29 +768,68 @@
             if (found) {
                 document.getElementById('input-preview-img').src = found.url;
                 document.getElementById('input-preview-label').innerText = found.name;
+                updateSpecimenStatusBanner(`Library Sample: ${found.name}`, true);
+            } else {
+                const name = selectedPresetPath.split(/[\\/]/).pop();
+                document.getElementById('input-preview-img').src = `/api/image-preview?path=${encodeURIComponent(selectedPresetPath)}`;
+                document.getElementById('input-preview-label').innerText = name;
+                updateSpecimenStatusBanner(`Library Sample: ${name}`, true);
             }
         }
 
-        function handleFileUpload(e) {
-            const file = e.target.files[0];
+        function processSelectedImageFile(file) {
             if (!file) return;
             uploadedImageFile = file;
             selectedPresetPath = null;
 
+            const sizeKb = (file.size / 1024).toFixed(1);
             const reader = new FileReader();
             reader.onload = function(evt) {
                 document.getElementById('input-preview-img').src = evt.target.result;
-                document.getElementById('input-preview-label').innerText = file.name;
+                document.getElementById('input-preview-label').innerText = `${file.name} (${sizeKb} KB)`;
+                
+                const statusBox = document.getElementById('upload-image-status');
+                if (statusBox) {
+                    statusBox.innerHTML = `
+                        <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded text-xs font-semibold">
+                            <span><i class="fa-solid fa-circle-check mr-1.5 text-emerald-600"></i> ${file.name} (${sizeKb} KB)</span>
+                            <button type="button" onclick="clearUploadedImage()" class="text-slate-400 hover:text-red-500 ml-2 text-xs font-bold">&times; Clear</button>
+                        </div>
+                    `;
+                }
+                updateSpecimenStatusBanner(`Uploaded: ${file.name} (${sizeKb} KB)`, true);
             };
             reader.readAsDataURL(file);
         }
 
-        function handleCsvUpload(e) {
-            const file = e.target.files[0];
-            if (file) {
-                uploadedSensorFile = file;
-                document.getElementById('sensor-csv-name').innerText = `Selected: ${file.name}`;
+        function clearUploadedImage() {
+            uploadedImageFile = null;
+            document.getElementById('upload-cell-file').value = '';
+            document.getElementById('input-preview-img').src = '';
+            document.getElementById('input-preview-label').innerText = 'No file selected';
+            const statusBox = document.getElementById('upload-image-status');
+            if (statusBox) statusBox.innerHTML = '';
+            updateSpecimenStatusBanner('Please upload a cell micrograph file', false);
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files ? e.target.files[0] : null;
+            processSelectedImageFile(file);
+        }
+
+        function processSelectedCsvFile(file) {
+            if (!file) return;
+            uploadedSensorFile = file;
+            const label = document.getElementById('sensor-csv-name');
+            if (label) {
+                label.innerText = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                label.classList.add('text-emerald-700', 'font-semibold');
             }
+        }
+
+        function handleCsvUpload(e) {
+            const file = e.target.files ? e.target.files[0] : null;
+            processSelectedCsvFile(file);
         }
 
         function switchResultTab(tabName) {
@@ -728,8 +849,17 @@
         }
 
         async function executeAnalysis() {
+            // Guard: Guarantee preset path is populated if in library mode
+            const activeSource = document.querySelector('input[name="image-source"]:checked').value;
+            if (activeSource === 'library' && !selectedPresetPath) {
+                const select = document.getElementById('select-sample-file');
+                if (select && select.value) {
+                    selectedPresetPath = select.value;
+                }
+            }
+
             if (!selectedPresetPath && !uploadedImageFile) {
-                alert('Please select or upload a cell micrograph before analyzing.');
+                alert('Please select a library sample or upload a cell micrograph before analyzing.');
                 return;
             }
 

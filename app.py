@@ -106,10 +106,11 @@ def get_sample_images():
 
     samples = []
     for p in sorted(target_dir.glob("*.png"))[:10]:
+        posix_rel = p.relative_to(config.BASE_DIR).as_posix()
         samples.append({
             "name": p.name,
-            "path": str(p.relative_to(config.BASE_DIR)),
-            "url": f"/api/image-preview?path={str(p.relative_to(config.BASE_DIR))}",
+            "path": posix_rel,
+            "url": f"/api/image-preview?path={posix_rel}",
         })
     return jsonify({"samples": samples})
 
@@ -121,7 +122,10 @@ def image_preview():
     if not rel_path:
         return "Missing path", 400
 
-    full_path = (config.BASE_DIR / rel_path).resolve()
+    # Normalize backslashes from Windows/URL encodings to posix slashes
+    clean_rel = rel_path.replace("\\", "/").lstrip("/")
+    full_path = (config.BASE_DIR / clean_rel).resolve()
+
     # Path traversal protection
     if not str(full_path).startswith(str(config.BASE_DIR)):
         return "Unauthorized path", 403
@@ -143,7 +147,7 @@ def analyze():
             sample_id = Path(file.filename).stem
             raw_rgb = load_image(image_bytes)
         elif "preset_path" in request.form and request.form["preset_path"]:
-            rel_path = request.form["preset_path"]
+            rel_path = request.form["preset_path"].replace("\\", "/").lstrip("/")
             full_path = (config.BASE_DIR / rel_path).resolve()
             if not full_path.exists() or not str(full_path).startswith(str(config.BASE_DIR)):
                 return jsonify({"error": "Invalid benchmark sample path"}), 400
