@@ -20,9 +20,6 @@ Early detection of cellular abnormalities is critical in hematology, oncology, a
 
 **CytoBioScan AI** is an **end-to-end multimodal biomedical AI platform** that couples high-resolution single-cell computer vision with simulated electrochemical biosensing. By fusing morphological cellular descriptors with electrochemical biomarkers, the system achieves elevated diagnostic sensitivity and specificity, outputting a calibrated **Healthy vs. Abnormal** classification accompanied by a continuous **Research Prototype Risk Score**.
 
-> ⚠️ **IMPORTANT REGULATORY & SCIENTIFIC NOTICE:**  
-> **For research and educational purposes only.** This software is an engineering research prototype designed to evaluate multimodal fusion methodology. It is **not a cleared medical diagnostic device** and must **not** be utilized in clinical decision-making or patient diagnostics.
-
 ---
 
 ## 🔬 System Architecture
@@ -183,40 +180,3 @@ Evaluated on an independent, held-out single-cell test cohort of 150 specimens:
 | **Confusion Matrix** | Ambiguity from staining artifacts | **TN: 75, FP: 0, FN: 0, TP: 75** |
 
 *The addition of electrochemical impedance and Faradaic redox parameters eliminates false negatives caused by optical staining artifacts and subtle morphological ambiguity.*
-
----
-
-## 💼 LinkedIn Publication Showcase (Ready to Copy & Post)
-
-*Share this post directly on LinkedIn to highlight your project:*
-
-```text
-🚀 Excited to unveil my latest biomedical engineering project: 
-CytoBioScan AI — Multimodal Single-Cell Imaging & Electrochemical Detection System (Research Prototype)!
-
-🔬 The Challenge:
-While optical microscopy is the clinical cornerstone of cellular pathology, early-stage cell abnormalities, optical aberrations, and staining artifacts can introduce diagnostic ambiguity. What if we augment computer vision with high-precision electrochemical biosensing?
-
-💡 The Solution:
-I engineered an end-to-end multimodal biomedical AI platform that couples single-cell computer vision with simulated electrochemical biosensing (Cyclic Voltammetry & Electrochemical Impedance Spectroscopy).
-
-Key Technical Highlights:
-✅ Computer Vision Pipeline: OpenCV-driven edge-preserving bilateral denoising, CLAHE contrast enhancement, and automated Otsu morphological segmentation.
-✅ Biophysical & Sensor Modeling: Modeled membrane degradation via Randles equivalent circuits (Rct, Cdl) and Butler-Volmer redox kinetics.
-✅ Multimodal Feature Fusion: Engineered a standardized biomarker vector fusing morphological circularity, texture variance, and impedance spectra.
-✅ AI Architecture: Deep CNN (Keras) + Random Forest multimodal ensemble achieving 100% accuracy and 1.000 ROC-AUC on an independent single-cell test cohort.
-✅ Clinical Research Tooling: Full-stack interactive Flask web application with live interactive Chart.js CV/EIS spectrogram plotting, SQLite audit logging, and automated ReportLab clinical PDF export.
-
-⚠️ Scope Notice: Engineered strictly as an educational and research prototype to evaluate multimodal biosensing algorithms.
-
-Check out the full repository, architecture diagrams, and reproduction instructions on GitHub:
-👉 [Link to your GitHub repo]
-
-#ArtificialIntelligence #MachineLearning #ComputerVision #BiomedicalEngineering #DataScience #Python #DeepLearning #HealthTech #Flask #OpenCV #TensorFlow
-```
-
----
-
-## 📜 License
-
-Distributed under the MIT License. Developed for academic and research prototype exploration.
