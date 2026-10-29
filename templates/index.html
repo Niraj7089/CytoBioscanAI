@@ -744,7 +744,7 @@
                 select.innerHTML = '';
                 currentSampleList.forEach((s) => {
                     const opt = document.createElement('option');
-                    opt.value = s.sample_id || s.path;
+                    opt.value = s.path;
                     let label = s.name;
                     if (s.rct && s.ipa) {
                         label = `${s.name} [Rct: ${Math.round(s.rct)} Ω | Ipa: ${s.ipa.toFixed(1)} µA]`;
@@ -756,11 +756,11 @@
                 if (currentSampleList.length > 0) {
                     onSampleChange();
                 } else {
-                    updateSpecimenStatusBanner('No benchmark samples found in database', false);
+                    updateSpecimenStatusBanner('No benchmark samples found in data folder', false);
                 }
             } catch (err) {
                 console.error('Failed to load samples:', err);
-                updateSpecimenStatusBanner('Error connecting to sample database', false);
+                updateSpecimenStatusBanner('Error loading sample data', false);
             }
         }
 
@@ -773,16 +773,15 @@
             selectedPresetPath = select.value;
             uploadedImageFile = null;
 
-            const found = currentSampleList.find(s => (s.sample_id && s.sample_id === selectedPresetPath) || (s.path && s.path === selectedPresetPath));
+            const found = currentSampleList.find(s => s.path === selectedPresetPath || s.sample_id === selectedPresetPath);
             if (found) {
-                // Immediate display from database base64 payload (0-latency, no network roundtrip needed)
-                document.getElementById('input-preview-img').src = found.image_data || found.url;
+                document.getElementById('input-preview-img').src = found.url || `/api/image-preview?path=${encodeURIComponent(found.path)}`;
                 document.getElementById('input-preview-label').innerText = found.name;
                 const rctStr = found.rct ? ` (Rct: ${Math.round(found.rct)} Ω, Ipa: ${found.ipa.toFixed(1)} µA)` : '';
                 updateSpecimenStatusBanner(`Dataset Record: ${found.name}${rctStr}`, true);
             } else {
                 const name = selectedPresetPath.split(/[\\/]/).pop();
-                document.getElementById('input-preview-img').src = `/api/sample-image/${encodeURIComponent(selectedPresetPath)}`;
+                document.getElementById('input-preview-img').src = `/api/image-preview?path=${encodeURIComponent(selectedPresetPath)}`;
                 document.getElementById('input-preview-label').innerText = name;
                 updateSpecimenStatusBanner(`Dataset Record: ${name}`, true);
             }

@@ -2,12 +2,11 @@
   "functions": {
     "api/index.py": {
       "includeFiles": [
-        "templates/**",
+        "data/**",
         "models/**",
         "reports/**",
-        "src/**",
-        "data/sensor/**",
-        "data/raw/test/**"
+        "templates/**",
+        "src/**"
       ]
     }
   },

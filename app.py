@@ -13,6 +13,7 @@ import base64
 import io
 from pathlib import Path
 from datetime import datetime
+from typing import Optional, Dict, Any, List
 import cv2
 import numpy as np
 import pandas as pd
@@ -57,9 +58,6 @@ from src.database.db_manager import (
     fetch_all_predictions,
     get_summary_statistics,
     clear_history,
-    get_sample_images_by_category,
-    get_sample_image_by_id,
-    get_sensor_data_for_sample,
 )
 from reports.generate_report import generate_pdf_report
 
@@ -68,6 +66,47 @@ app = Flask(__name__, template_folder=str(BASE_DIR / "templates"))
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 TELEMETRY_CACHE = {}
+
+# Sensor CSV Lookup directly from data/sensor/sensor_data.csv
+_SENSOR_DATA_MAP: Optional[Dict[str, Dict[str, Any]]] = None
+
+
+def get_sensor_data_map() -> Dict[str, Dict[str, Any]]:
+    """Load data/sensor/sensor_data.csv into memory for fast O(1) cell lookup."""
+    global _SENSOR_DATA_MAP
+    if _SENSOR_DATA_MAP is None:
+        _SENSOR_DATA_MAP = {}
+        csv_path = config.SENSOR_CSV_PATH
+        if not csv_path.exists():
+            csv_path = config.BASE_DIR / "data" / "sensor" / "sensor_data.csv"
+        if csv_path.exists():
+            try:
+                df = pd.read_csv(csv_path)
+                for _, row in df.iterrows():
+                    cid = str(row["cell_id"]).strip()
+                    _SENSOR_DATA_MAP[cid] = {
+                        "peak_anodic_current": float(row["peak_anodic_current"]),
+                        "peak_cathodic_current": float(row["peak_cathodic_current"]),
+                        "delta_peak_potential": float(row["delta_peak_potential"]),
+                        "mean_current": float(row["mean_current"]),
+                        "std_current": float(row["std_current"]),
+                        "charge_transfer_resistance": float(row["charge_transfer_resistance"]),
+                        "double_layer_capacitance_uf": float(row["double_layer_capacitance_uf"]),
+                        "solution_resistance": float(row["solution_resistance"]),
+                        "impedance_low_freq": float(row["impedance_low_freq"]),
+                        "impedance_high_freq": float(row["impedance_high_freq"]),
+                        "min_phase_angle": float(row["min_phase_angle"]),
+                    }
+            except Exception as e:
+                app.logger.warning(f"Error reading sensor_data.csv: {e}")
+    return _SENSOR_DATA_MAP
+
+
+def get_sensor_data_for_sample(sample_id: str) -> Optional[Dict[str, float]]:
+    """Retrieve verified electrochemical sensor measurements directly from data/sensor/sensor_data.csv."""
+    stem = Path(sample_id).stem
+    sensor_map = get_sensor_data_map()
+    return sensor_map.get(stem)
 
 
 def np_image_to_base64(img_rgb: np.ndarray) -> str:
@@ -100,87 +139,127 @@ def index():
 
 @app.route("/api/sample-images", methods=["GET"])
 def get_sample_images():
-    """Retrieve available benchmark library images from the SQLite sample database."""
+    """Retrieve available benchmark library images directly from data/raw/test/."""
     category = request.args.get("category", "Healthy")
-    samples = get_sample_images_by_category(category)
+    target_dir = config.TEST_DIR / category
+    if not target_dir.exists():
+        target_dir = config.RAW_DATA_DIR / "train" / category
+
+    if not target_dir.exists():
+        return jsonify({"samples": []})
+
+    sensor_map = get_sensor_data_map()
+    samples = []
+    for p in sorted(target_dir.glob("*.png")):
+        try:
+            posix_rel = p.relative_to(config.BASE_DIR).as_posix()
+        except ValueError:
+            posix_rel = p.as_posix()
+
+        stem = p.stem
+        sensor_info = sensor_map.get(stem, {})
+        rct = sensor_info.get("charge_transfer_resistance")
+        ipa = sensor_info.get("peak_anodic_current")
+        cdl = sensor_info.get("double_layer_capacitance_uf")
+
+        samples.append({
+            "name": p.name,
+            "sample_id": stem,
+            "path": posix_rel,
+            "url": f"/api/image-preview?path={posix_rel}",
+            "rct": rct,
+            "ipa": ipa,
+            "cdl": cdl,
+        })
+
     return jsonify({"samples": samples})
 
 
 @app.route("/api/sample-image/<sample_id>", methods=["GET"])
 def get_single_sample_image(sample_id):
-    """Serve image binary directly from sample database."""
-    sample = get_sample_image_by_id(sample_id)
-    if not sample:
-        stem = Path(sample_id).stem
-        sample = get_sample_image_by_id(stem)
-
-    if sample:
-        raw_bytes = base64.b64decode(sample["image_base64"])
-        return send_file(io.BytesIO(raw_bytes), mimetype="image/png")
-
-    return jsonify({"error": "Sample image not found in database"}), 404
+    """Serve image binary directly from data/raw folder by sample_id."""
+    clean_id = Path(sample_id).name
+    filename = clean_id if clean_id.endswith(".png") else f"{clean_id}.png"
+    candidates = list(config.RAW_DATA_DIR.rglob(filename))
+    if candidates:
+        with open(candidates[0], "rb") as f:
+            return send_file(io.BytesIO(f.read()), mimetype="image/png")
+    return jsonify({"error": f"Sample image '{sample_id}' not found in data directory"}), 404
 
 
 @app.route("/api/image-preview", methods=["GET"])
 def image_preview():
-    """Serve image preview from database or repository file path."""
-    sample_id = request.args.get("sample_id")
-    rel_path = request.args.get("path")
+    """Serve image binary directly from repository data folder."""
+    rel_path = request.args.get("path") or request.args.get("sample_id")
+    if not rel_path:
+        return "Missing sample identifier or path", 400
 
-    key = sample_id or rel_path
-    if not key:
-        return "Missing sample identifier", 400
-
-    stem = Path(key).stem
-    db_sample = get_sample_image_by_id(stem)
-    if db_sample:
-        raw_bytes = base64.b64decode(db_sample["image_base64"])
-        return send_file(io.BytesIO(raw_bytes), mimetype="image/png")
-
-    clean_rel = key.replace("\\", "/").lstrip("/")
+    clean_rel = rel_path.replace("\\", "/").lstrip("/")
     full_path = (config.BASE_DIR / clean_rel).resolve()
-    if str(full_path).startswith(str(config.BASE_DIR)) and full_path.exists():
-        return send_file(full_path, mimetype="image/png")
 
-    return "File not found", 404
+    # If full_path does not exist, search by filename in config.RAW_DATA_DIR
+    if not full_path.exists():
+        filename = Path(clean_rel).name
+        if not filename.endswith(".png"):
+            filename = f"{filename}.png"
+        candidates = list(config.RAW_DATA_DIR.rglob(filename))
+        if candidates:
+            full_path = candidates[0].resolve()
+
+    if not full_path.exists() or not full_path.is_file():
+        return "File not found", 404
+
+    # Security check: ensure path is within BASE_DIR
+    if not str(full_path).startswith(str(config.BASE_DIR)):
+        return "Unauthorized path", 403
+
+    with open(full_path, "rb") as f:
+        img_bytes = f.read()
+
+    return send_file(io.BytesIO(img_bytes), mimetype="image/png")
 
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     """Execute complete multimodal AI analysis on a single cell."""
     try:
-        # 1. Resolve Image Input from Upload or Database Library
+        # 1. Resolve Image Input from Upload or Physical Data Folder
+        sample_id = None
+        raw_rgb = None
+
         if "image_file" in request.files and request.files["image_file"].filename != "":
             file = request.files["image_file"]
             image_bytes = file.read()
             sample_id = Path(file.filename).stem
             raw_rgb = load_image(image_bytes)
-        elif "sample_id" in request.form and request.form["sample_id"]:
-            sample_id = request.form["sample_id"]
-            stem = Path(sample_id).stem
-            db_sample = get_sample_image_by_id(stem)
-            if db_sample:
-                raw_bytes = base64.b64decode(db_sample["image_base64"])
-                raw_rgb = load_image(raw_bytes)
-            else:
-                return jsonify({"error": f"Sample '{sample_id}' not found in database"}), 404
         elif "preset_path" in request.form and request.form["preset_path"]:
             preset_path = request.form["preset_path"]
-            stem = Path(preset_path).stem
-            db_sample = get_sample_image_by_id(stem)
-            if db_sample:
-                sample_id = db_sample["sample_id"]
-                raw_bytes = base64.b64decode(db_sample["image_base64"])
-                raw_rgb = load_image(raw_bytes)
-            else:
-                clean_rel = preset_path.replace("\\", "/").lstrip("/")
-                full_path = (config.BASE_DIR / clean_rel).resolve()
-                if not full_path.exists() or not str(full_path).startswith(str(config.BASE_DIR)):
-                    return jsonify({"error": "Invalid benchmark sample path"}), 400
-                sample_id = full_path.stem
-                raw_rgb = load_image(full_path)
+            clean_rel = preset_path.replace("\\", "/").lstrip("/")
+            full_path = (config.BASE_DIR / clean_rel).resolve()
+            if not full_path.exists():
+                filename = Path(clean_rel).name
+                candidates = list(config.RAW_DATA_DIR.rglob(filename))
+                if candidates:
+                    full_path = candidates[0].resolve()
+
+            if not full_path.exists() or not str(full_path).startswith(str(config.BASE_DIR)):
+                return jsonify({"error": f"Sample file not found at '{preset_path}'"}), 404
+
+            sample_id = full_path.stem
+            with open(full_path, "rb") as f:
+                raw_rgb = load_image(f.read())
+        elif "sample_id" in request.form and request.form["sample_id"]:
+            sid = request.form["sample_id"]
+            filename = sid if sid.endswith(".png") else f"{sid}.png"
+            candidates = list(config.RAW_DATA_DIR.rglob(filename))
+            if not candidates:
+                return jsonify({"error": f"Sample '{sid}' not found in data directory"}), 404
+            full_path = candidates[0].resolve()
+            sample_id = full_path.stem
+            with open(full_path, "rb") as f:
+                raw_rgb = load_image(f.read())
         else:
-            return jsonify({"error": "No image file or benchmark sample provided"}), 400
+            return jsonify({"error": "No cell micrograph uploaded or selected"}), 400
 
         # 2. Parse Sensor Simulation Options
         cell_condition = request.form.get("cell_condition", "Healthy")

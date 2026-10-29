@@ -1,16 +1,14 @@
 """SQLite database manager for persisting single-cell diagnostic history and audit trail."""
 
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import pandas as pd
 
 import config
-from src.database.sample_catalog import SAMPLE_IMAGE_DATABASE
 
-
-import tempfile
 
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
     """Get SQLite database connection, ensuring parent directory exists with serverless fallback."""
@@ -34,7 +32,7 @@ def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
 
 
 def init_db(db_path: Optional[Path] = None) -> None:
-    """Initialize database tables and seed sample library if not yet populated."""
+    """Initialize database tables for clinical audit history."""
     conn = get_connection(db_path)
     with conn:
         conn.execute("""
@@ -55,198 +53,7 @@ def init_db(db_path: Optional[Path] = None) -> None:
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON prediction_history (timestamp);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_prediction ON prediction_history (prediction);")
-
-        # Check if existing sample_library table needs schema migration
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA table_info(sample_library)")
-        existing_cols = [r[1] for r in cursor.fetchall()]
-        if existing_cols and "peak_anodic_current" not in existing_cols:
-            conn.execute("DROP TABLE IF EXISTS sample_library")
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS sample_library (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sample_id TEXT UNIQUE NOT NULL,
-                category TEXT NOT NULL,
-                filename TEXT NOT NULL,
-                description TEXT,
-                image_base64 TEXT NOT NULL,
-                peak_anodic_current REAL,
-                peak_cathodic_current REAL,
-                delta_peak_potential REAL,
-                mean_current REAL,
-                std_current REAL,
-                charge_transfer_resistance REAL,
-                double_layer_capacitance_uf REAL,
-                solution_resistance REAL,
-                impedance_low_freq REAL,
-                impedance_high_freq REAL,
-                min_phase_angle REAL
-            );
-        """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_sample_category ON sample_library (category);")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_sample_id ON sample_library (sample_id);")
-
-        # Auto-seed sample library from catalog if count doesn't match complete catalog
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM sample_library")
-        row_count = cursor.fetchone()[0]
-        if row_count < len(SAMPLE_IMAGE_DATABASE):
-            for item in SAMPLE_IMAGE_DATABASE:
-                conn.execute("""
-                    INSERT OR REPLACE INTO sample_library (
-                        sample_id, category, filename, description, image_base64,
-                        peak_anodic_current, peak_cathodic_current, delta_peak_potential,
-                        mean_current, std_current, charge_transfer_resistance,
-                        double_layer_capacitance_uf, solution_resistance,
-                        impedance_low_freq, impedance_high_freq, min_phase_angle
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    item["sample_id"], item["category"], item["filename"],
-                    item["description"], item["image_base64"],
-                    item.get("peak_anodic_current"), item.get("peak_cathodic_current"),
-                    item.get("delta_peak_potential"), item.get("mean_current"),
-                    item.get("std_current"), item.get("charge_transfer_resistance"),
-                    item.get("double_layer_capacitance_uf"), item.get("solution_resistance"),
-                    item.get("impedance_low_freq"), item.get("impedance_high_freq"),
-                    item.get("min_phase_angle")
-                ))
     conn.close()
-
-
-def get_sample_images_by_category(category: str = "Healthy", db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
-    """Query sample library database for specimens matching category, including real sensor data."""
-    init_db(db_path)
-    conn = get_connection(db_path)
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT sample_id, category, filename, description, image_base64,
-               charge_transfer_resistance, peak_anodic_current, double_layer_capacitance_uf
-        FROM sample_library
-        WHERE category = ?
-        ORDER BY id ASC
-    """, (category,))
-    rows = cursor.fetchall()
-    conn.close()
-
-    if not rows:
-        return [
-            {
-                "sample_id": s["sample_id"],
-                "name": s["filename"],
-                "category": s["category"],
-                "description": s["description"],
-                "rct": s.get("charge_transfer_resistance"),
-                "ipa": s.get("peak_anodic_current"),
-                "cdl": s.get("double_layer_capacitance_uf"),
-                "image_data": f"data:image/png;base64,{s['image_base64']}",
-                "url": f"/api/sample-image/{s['sample_id']}"
-            }
-            for s in SAMPLE_IMAGE_DATABASE if s["category"] == category
-        ]
-
-    return [
-        {
-            "sample_id": r["sample_id"],
-            "name": r["filename"],
-            "category": r["category"],
-            "description": r["description"],
-            "rct": r["charge_transfer_resistance"],
-            "ipa": r["peak_anodic_current"],
-            "cdl": r["double_layer_capacitance_uf"],
-            "image_data": f"data:image/png;base64,{r['image_base64']}",
-            "url": f"/api/sample-image/{r['sample_id']}"
-        }
-        for r in rows
-    ]
-
-
-def get_sample_image_by_id(sample_id: str, db_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
-    """Fetch a single sample image record by sample_id from the database."""
-    init_db(db_path)
-    conn = get_connection(db_path)
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT *
-        FROM sample_library
-        WHERE sample_id = ? OR filename = ?
-    """, (sample_id, sample_id))
-    row = cursor.fetchone()
-    conn.close()
-
-    if row:
-        return dict(row)
-
-    # Fallback to catalog
-    for s in SAMPLE_IMAGE_DATABASE:
-        if s["sample_id"] == sample_id or s["filename"] == sample_id:
-            return s
-    return None
-
-
-def get_sensor_data_for_sample(sample_id: str, db_path: Optional[Path] = None) -> Optional[Dict[str, float]]:
-    """Retrieve verified biophysical electrochemical sensor measurements for sample_id from dataset files or database."""
-    stem = Path(sample_id).stem
-
-    # 1. First check SQLite sample library database
-    rec = get_sample_image_by_id(stem, db_path=db_path)
-    if rec and rec.get("charge_transfer_resistance") is not None:
-        return {
-            "peak_anodic_current": float(rec["peak_anodic_current"]),
-            "peak_cathodic_current": float(rec["peak_cathodic_current"]),
-            "delta_peak_potential": float(rec["delta_peak_potential"]),
-            "mean_current": float(rec.get("mean_current", 0.0)),
-            "std_current": float(rec.get("std_current", 5.0)),
-            "charge_transfer_resistance": float(rec["charge_transfer_resistance"]),
-            "double_layer_capacitance_uf": float(rec.get("double_layer_capacitance_uf", 2.0)),
-            "solution_resistance": float(rec.get("solution_resistance", 50.0)),
-            "impedance_low_freq": float(rec.get("impedance_low_freq", rec["charge_transfer_resistance"] + 50.0)),
-            "impedance_high_freq": float(rec.get("impedance_high_freq", 50.0)),
-            "min_phase_angle": float(rec.get("min_phase_angle", -70.0)),
-        }
-
-    # 2. Check sensor_data.csv on disk if available
-    if config.SENSOR_CSV_PATH.exists():
-        try:
-            df = pd.read_csv(config.SENSOR_CSV_PATH)
-            matched = df[df["cell_id"] == stem]
-            if not matched.empty:
-                row = matched.iloc[0]
-                return {
-                    "peak_anodic_current": float(row["peak_anodic_current"]),
-                    "peak_cathodic_current": float(row["peak_cathodic_current"]),
-                    "delta_peak_potential": float(row["delta_peak_potential"]),
-                    "mean_current": float(row["mean_current"]),
-                    "std_current": float(row["std_current"]),
-                    "charge_transfer_resistance": float(row["charge_transfer_resistance"]),
-                    "double_layer_capacitance_uf": float(row["double_layer_capacitance_uf"]),
-                    "solution_resistance": float(row["solution_resistance"]),
-                    "impedance_low_freq": float(row["impedance_low_freq"]),
-                    "impedance_high_freq": float(row["impedance_high_freq"]),
-                    "min_phase_angle": float(row["min_phase_angle"]),
-                }
-        except Exception:
-            pass
-
-    # 3. Fallback to catalog
-    for s in SAMPLE_IMAGE_DATABASE:
-        if (s["sample_id"] == stem or s["filename"] == sample_id) and s.get("charge_transfer_resistance"):
-            return {
-                "peak_anodic_current": float(s["peak_anodic_current"]),
-                "peak_cathodic_current": float(s["peak_cathodic_current"]),
-                "delta_peak_potential": float(s["delta_peak_potential"]),
-                "mean_current": float(s.get("mean_current", 0.0)),
-                "std_current": float(s.get("std_current", 5.0)),
-                "charge_transfer_resistance": float(s["charge_transfer_resistance"]),
-                "double_layer_capacitance_uf": float(s.get("double_layer_capacitance_uf", 2.0)),
-                "solution_resistance": float(s.get("solution_resistance", 50.0)),
-                "impedance_low_freq": float(s.get("impedance_low_freq", s["charge_transfer_resistance"] + 50.0)),
-                "impedance_high_freq": float(s.get("impedance_high_freq", 50.0)),
-                "min_phase_angle": float(s.get("min_phase_angle", -70.0)),
-            }
-
-    return None
 
 
 def save_prediction(
