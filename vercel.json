@@ -1,7 +1,14 @@
 {
   "functions": {
     "api/index.py": {
-      "includeFiles": "{templates/**,models/**,reports/**,data/**}"
+      "includeFiles": [
+        "templates/**",
+        "models/**",
+        "reports/**",
+        "src/**",
+        "data/sensor/**",
+        "data/raw/test/**"
+      ]
     }
   },
   "rewrites": [

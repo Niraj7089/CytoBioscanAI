@@ -59,6 +59,7 @@ from src.database.db_manager import (
     clear_history,
     get_sample_images_by_category,
     get_sample_image_by_id,
+    get_sensor_data_for_sample,
 )
 from reports.generate_report import generate_pdf_report
 
@@ -191,11 +192,15 @@ def analyze():
         mask, primary_contour, overlay = segment_cell(enhanced_uint8)
         img_features = extract_image_features(enhanced_uint8, mask=mask)
 
-        # 4. Electrochemical Sensor Simulation (CV & EIS) or CSV Upload
+        # 4. Electrochemical Sensor Data: Priority to Verified Dataset Files (sensor_data.csv)
         sensor_features = None
         cv_data = None
         eis_data = None
+        data_source_label = "Biophysical Simulation Model"
+        is_dataset_record = False
 
+        # Check for uploaded custom sensor CSV first
+        matched_sensor_params = None
         if "sensor_file" in request.files and request.files["sensor_file"].filename != "":
             try:
                 sensor_df = pd.read_csv(request.files["sensor_file"])
@@ -203,26 +208,50 @@ def analyze():
                     matched_row = sensor_df[sensor_df["cell_id"] == sample_id].iloc[0]
                 else:
                     matched_row = sensor_df.iloc[0]
-
-                extracted = {}
-                for col in config.SENSOR_FEATURE_COLS:
-                    if col in matched_row and pd.notnull(matched_row[col]):
-                        extracted[col] = float(matched_row[col])
-                if len(extracted) == len(config.SENSOR_FEATURE_COLS):
-                    sensor_features = extracted
+                matched_sensor_params = matched_row.to_dict()
+                data_source_label = f"Uploaded Sensor CSV ({request.files['sensor_file'].filename})"
+                is_dataset_record = True
             except Exception as ex:
                 app.logger.warning(f"Failed to read custom sensor CSV: {ex}")
 
-        if sensor_features is None:
-            cv_data = simulate_cyclic_voltammetry(cell_type=cell_condition, noise_level=noise_level)
-            eis_data = simulate_impedance_spectroscopy(cell_type=cell_condition, noise_level=noise_level)
-            sensor_features = extract_sensor_features(cv_data, eis_data)
+        # If no CSV uploaded, automatically load paired biophysical measurements from dataset files / database
+        if matched_sensor_params is None:
+            matched_sensor_params = get_sensor_data_for_sample(sample_id)
+            if matched_sensor_params:
+                data_source_label = "Dataset File (data/sensor/sensor_data.csv)"
+                is_dataset_record = True
+
+        # Generate realistic Voltammetry & Impedance curves conditioned on real dataset parameters
+        cv_data = simulate_cyclic_voltammetry(
+            cell_type=cell_condition,
+            noise_level=noise_level,
+            params=matched_sensor_params
+        )
+        eis_data = simulate_impedance_spectroscopy(
+            cell_type=cell_condition,
+            noise_level=noise_level,
+            params=matched_sensor_params
+        )
+
+        if matched_sensor_params and "charge_transfer_resistance" in matched_sensor_params:
+            sensor_features = {
+                "peak_anodic_current": float(matched_sensor_params["peak_anodic_current"]),
+                "peak_cathodic_current": float(matched_sensor_params["peak_cathodic_current"]),
+                "delta_peak_potential": float(matched_sensor_params["delta_peak_potential"]),
+                "mean_current": float(matched_sensor_params.get("mean_current", float(np.mean(cv_data["current_ua"])))),
+                "std_current": float(matched_sensor_params.get("std_current", float(np.std(cv_data["current_ua"])))),
+                "charge_transfer_resistance": float(matched_sensor_params["charge_transfer_resistance"]),
+                "double_layer_capacitance_uf": float(matched_sensor_params.get("double_layer_capacitance_uf", 2.0)),
+                "solution_resistance": float(matched_sensor_params.get("solution_resistance", 50.0)),
+                "impedance_low_freq": float(matched_sensor_params.get("impedance_low_freq", matched_sensor_params["charge_transfer_resistance"] + 50.0)),
+                "impedance_high_freq": float(matched_sensor_params.get("impedance_high_freq", 50.0)),
+                "min_phase_angle": float(matched_sensor_params.get("min_phase_angle", -70.0)),
+            }
         else:
-            cv_data = simulate_cyclic_voltammetry(cell_type=cell_condition, noise_level=noise_level)
-            eis_data = simulate_impedance_spectroscopy(cell_type=cell_condition, noise_level=noise_level)
+            sensor_features = extract_sensor_features(cv_data, eis_data)
 
         # 5. High-Precision Scanning Probe & Advanced Voltammetry Simulation
-        secm_app = simulate_secm_approach_curve(cell_type=cell_condition, noise_level=noise_level)
+        secm_app = simulate_secm_approach_curve(cell_type=cell_condition, noise_level=noise_level, params=matched_sensor_params)
         secm_2d = simulate_secm_2d_surface_scan(cell_type=cell_condition, mask=mask, noise_level=noise_level)
         dpv_data = simulate_differential_pulse_voltammetry(cell_type=cell_condition, noise_level=noise_level)
         ca_data = simulate_chronoamperometry(cell_type=cell_condition, noise_level=noise_level)
@@ -297,6 +326,8 @@ def analyze():
             "p_abnormal": round(p_abnormal, 4),
             "db_record_id": db_id,
             "report_filename": pdf_path.name,
+            "sensor_data_source": data_source_label,
+            "is_dataset_record": is_dataset_record,
             "image_features": img_features,
             "sensor_features": sensor_features,
             "instrument_metrics": instrument_metrics,

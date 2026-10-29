@@ -15,7 +15,8 @@ import config
 def simulate_cyclic_voltammetry(
     cell_type: str = "Healthy",
     noise_level: float = 0.05,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
+    params: Optional[Dict[str, Any]] = None
 ) -> Dict[str, np.ndarray]:
     """Simulate a Cyclic Voltammogram (CV) current response across a potential sweep.
 
@@ -23,6 +24,7 @@ def simulate_cyclic_voltammetry(
         cell_type: "Healthy" or "Abnormal".
         noise_level: Relative standard deviation of measurement noise.
         seed: Random seed for reproducibility.
+        params: Optional real dataset sensor parameters (ipa, ipc, delta_ep).
 
     Returns:
         Dictionary with keys:
@@ -35,10 +37,15 @@ def simulate_cyclic_voltammetry(
     rng = np.random.RandomState(seed)
     profile = config.ELECTROCHEMICAL_PROFILES.get(cell_type, config.ELECTROCHEMICAL_PROFILES["Healthy"])
 
-    # Draw stochastic biophysical parameters
-    ipa = float(rng.normal(profile["ipa_mean"], profile["ipa_std"]))
-    ipc = float(rng.normal(profile["ipc_mean"], profile["ipc_std"]))
-    delta_ep_v = float(rng.normal(profile["delta_ep_mean"], profile["delta_ep_std"])) / 1000.0
+    # Draw stochastic biophysical parameters or use verified real dataset records
+    if params and "peak_anodic_current" in params:
+        ipa = float(params["peak_anodic_current"])
+        ipc = float(params.get("peak_cathodic_current", -abs(ipa) * 0.95))
+        delta_ep_v = float(params.get("delta_peak_potential", 75.0)) / 1000.0
+    else:
+        ipa = float(rng.normal(profile["ipa_mean"], profile["ipa_std"]))
+        ipc = float(rng.normal(profile["ipc_mean"], profile["ipc_std"]))
+        delta_ep_v = float(rng.normal(profile["delta_ep_mean"], profile["delta_ep_std"])) / 1000.0
 
     # Potential waveform: forward -0.4V -> +0.8V, reverse +0.8V -> -0.4V
     half_points = config.CV_POINTS // 2
@@ -79,7 +86,8 @@ def simulate_cyclic_voltammetry(
 def simulate_impedance_spectroscopy(
     cell_type: str = "Healthy",
     noise_level: float = 0.05,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
+    params: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """Simulate Electrochemical Impedance Spectroscopy (EIS) across a frequency spectrum.
 
@@ -100,9 +108,14 @@ def simulate_impedance_spectroscopy(
     rng = np.random.RandomState(seed)
     profile = config.ELECTROCHEMICAL_PROFILES.get(cell_type, config.ELECTROCHEMICAL_PROFILES["Healthy"])
 
-    rct = float(rng.normal(profile["rct_mean"], profile["rct_std"]))
-    cdl = float(rng.normal(profile["cdl_mean"], profile["cdl_std"]))
-    rs = config.EIS_R_SOL + float(rng.normal(0, 2.0))
+    if params and "charge_transfer_resistance" in params:
+        rct = float(params["charge_transfer_resistance"])
+        cdl = float(params.get("double_layer_capacitance_uf", 2.0)) * 1e-6
+        rs = float(params.get("solution_resistance", config.EIS_R_SOL))
+    else:
+        rct = float(rng.normal(profile["rct_mean"], profile["rct_std"]))
+        cdl = float(rng.normal(profile["cdl_mean"], profile["cdl_std"]))
+        rs = config.EIS_R_SOL + float(rng.normal(0, 2.0))
 
     freqs = np.logspace(
         np.log10(config.EIS_FREQ_MIN),
@@ -170,7 +183,8 @@ def simulate_full_cell_signal(
 def simulate_secm_approach_curve(
     cell_type: str = "Healthy",
     noise_level: float = 0.04,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
+    params: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """Simulate a Scanning Electrochemical Microscopy (SECM) microelectrode approach curve.
 
@@ -198,7 +212,11 @@ def simulate_secm_approach_curve(
     # Theoretical positive feedback (conductive substrate)
     i_pos = 0.68 + (0.78377 / l_vals) + 0.3315 * np.exp(-1.0672 / l_vals)
 
-    if cell_type == "Healthy":
+    is_healthy = (cell_type == "Healthy")
+    if params and "charge_transfer_resistance" in params:
+        is_healthy = float(params["charge_transfer_resistance"]) >= 1000.0
+
+    if is_healthy:
         alpha = 0.04  # High membrane resistance, almost pure negative feedback
         feedback_mode = "Negative Feedback (Intact Cell Membrane)"
     else:

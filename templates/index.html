@@ -269,8 +269,13 @@
             <div id="results-box" class="hidden space-y-6 pt-4">
 
                 <!-- Success Alert -->
-                <div id="alert-success" class="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm px-4 py-3 rounded font-medium">
-                    Analysis complete for sample <strong id="res-sample-name"></strong> (Audit Record #<span id="res-record-id"></span>)
+                <div id="alert-success" class="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm px-4 py-3 rounded font-medium flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        Analysis complete for sample <strong id="res-sample-name"></strong> (Audit Record #<span id="res-record-id"></span>)
+                    </div>
+                    <span id="res-data-source-badge" class="inline-flex items-center text-xs bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-semibold">
+                        <i class="fa-solid fa-database mr-1.5 text-emerald-600"></i> <span id="res-data-source-text">Dataset Record (sensor_data.csv)</span>
+                    </span>
                 </div>
 
                 <!-- 3 Top Metric Columns -->
@@ -740,7 +745,11 @@
                 currentSampleList.forEach((s) => {
                     const opt = document.createElement('option');
                     opt.value = s.sample_id || s.path;
-                    opt.innerText = s.name;
+                    let label = s.name;
+                    if (s.rct && s.ipa) {
+                        label = `${s.name} [Rct: ${Math.round(s.rct)} Ω | Ipa: ${s.ipa.toFixed(1)} µA]`;
+                    }
+                    opt.innerText = label;
                     select.appendChild(opt);
                 });
 
@@ -769,12 +778,13 @@
                 // Immediate display from database base64 payload (0-latency, no network roundtrip needed)
                 document.getElementById('input-preview-img').src = found.image_data || found.url;
                 document.getElementById('input-preview-label').innerText = found.name;
-                updateSpecimenStatusBanner(`Database Specimen: ${found.name}`, true);
+                const rctStr = found.rct ? ` (Rct: ${Math.round(found.rct)} Ω, Ipa: ${found.ipa.toFixed(1)} µA)` : '';
+                updateSpecimenStatusBanner(`Dataset Record: ${found.name}${rctStr}`, true);
             } else {
                 const name = selectedPresetPath.split(/[\\/]/).pop();
                 document.getElementById('input-preview-img').src = `/api/sample-image/${encodeURIComponent(selectedPresetPath)}`;
                 document.getElementById('input-preview-label').innerText = name;
-                updateSpecimenStatusBanner(`Database Specimen: ${name}`, true);
+                updateSpecimenStatusBanner(`Dataset Record: ${name}`, true);
             }
         }
 
@@ -905,6 +915,9 @@
             // 1. Success Box
             document.getElementById('res-sample-name').innerText = data.sample_id;
             document.getElementById('res-record-id').innerText = data.db_record_id || '1';
+            if (data.sensor_data_source) {
+                document.getElementById('res-data-source-text').innerText = data.sensor_data_source;
+            }
 
             // 2. Verdict Badge
             const badge = document.getElementById('badge-verdict');
