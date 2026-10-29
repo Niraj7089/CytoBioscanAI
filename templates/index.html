@@ -739,7 +739,7 @@
                 select.innerHTML = '';
                 currentSampleList.forEach((s) => {
                     const opt = document.createElement('option');
-                    opt.value = s.path;
+                    opt.value = s.sample_id || s.path;
                     opt.innerText = s.name;
                     select.appendChild(opt);
                 });
@@ -747,11 +747,11 @@
                 if (currentSampleList.length > 0) {
                     onSampleChange();
                 } else {
-                    updateSpecimenStatusBanner('No benchmark samples found in repository', false);
+                    updateSpecimenStatusBanner('No benchmark samples found in database', false);
                 }
             } catch (err) {
                 console.error('Failed to load samples:', err);
-                updateSpecimenStatusBanner('Error connecting to sample repository', false);
+                updateSpecimenStatusBanner('Error connecting to sample database', false);
             }
         }
 
@@ -764,16 +764,17 @@
             selectedPresetPath = select.value;
             uploadedImageFile = null;
 
-            const found = currentSampleList.find(s => s.path === selectedPresetPath);
+            const found = currentSampleList.find(s => (s.sample_id && s.sample_id === selectedPresetPath) || (s.path && s.path === selectedPresetPath));
             if (found) {
-                document.getElementById('input-preview-img').src = found.url;
+                // Immediate display from database base64 payload (0-latency, no network roundtrip needed)
+                document.getElementById('input-preview-img').src = found.image_data || found.url;
                 document.getElementById('input-preview-label').innerText = found.name;
-                updateSpecimenStatusBanner(`Library Sample: ${found.name}`, true);
+                updateSpecimenStatusBanner(`Database Specimen: ${found.name}`, true);
             } else {
                 const name = selectedPresetPath.split(/[\\/]/).pop();
-                document.getElementById('input-preview-img').src = `/api/image-preview?path=${encodeURIComponent(selectedPresetPath)}`;
+                document.getElementById('input-preview-img').src = `/api/sample-image/${encodeURIComponent(selectedPresetPath)}`;
                 document.getElementById('input-preview-label').innerText = name;
-                updateSpecimenStatusBanner(`Library Sample: ${name}`, true);
+                updateSpecimenStatusBanner(`Database Specimen: ${name}`, true);
             }
         }
 
@@ -872,6 +873,7 @@
             if (uploadedImageFile) {
                 fd.append('image_file', uploadedImageFile);
             } else if (selectedPresetPath) {
+                fd.append('sample_id', selectedPresetPath);
                 fd.append('preset_path', selectedPresetPath);
             }
 

@@ -7,6 +7,7 @@ from datetime import datetime
 import pandas as pd
 
 import config
+from src.database.sample_catalog import SAMPLE_IMAGE_DATABASE
 
 
 import tempfile
@@ -33,7 +34,7 @@ def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
 
 
 def init_db(db_path: Optional[Path] = None) -> None:
-    """Initialize database tables if they do not exist."""
+    """Initialize database tables and seed sample library if not yet populated."""
     conn = get_connection(db_path)
     with conn:
         conn.execute("""
@@ -54,7 +55,97 @@ def init_db(db_path: Optional[Path] = None) -> None:
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON prediction_history (timestamp);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_prediction ON prediction_history (prediction);")
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sample_library (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sample_id TEXT UNIQUE NOT NULL,
+                category TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                description TEXT,
+                image_base64 TEXT NOT NULL
+            );
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sample_category ON sample_library (category);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sample_id ON sample_library (sample_id);")
+
+        # Auto-seed sample library from catalog if empty
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM sample_library")
+        row_count = cursor.fetchone()[0]
+        if row_count < len(SAMPLE_IMAGE_DATABASE):
+            for item in SAMPLE_IMAGE_DATABASE:
+                conn.execute("""
+                    INSERT OR IGNORE INTO sample_library (sample_id, category, filename, description, image_base64)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (
+                    item["sample_id"], item["category"], item["filename"],
+                    item["description"], item["image_base64"]
+                ))
     conn.close()
+
+
+def get_sample_images_by_category(category: str = "Healthy", db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """Query sample library database for specimens matching category."""
+    init_db(db_path)
+    conn = get_connection(db_path)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT sample_id, category, filename, description, image_base64
+        FROM sample_library
+        WHERE category = ?
+        ORDER BY id ASC
+    """, (category,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        return [
+            {
+                "sample_id": s["sample_id"],
+                "name": s["filename"],
+                "category": s["category"],
+                "description": s["description"],
+                "image_data": f"data:image/png;base64,{s['image_base64']}",
+                "url": f"/api/sample-image/{s['sample_id']}"
+            }
+            for s in SAMPLE_IMAGE_DATABASE if s["category"] == category
+        ]
+
+    return [
+        {
+            "sample_id": r["sample_id"],
+            "name": r["filename"],
+            "category": r["category"],
+            "description": r["description"],
+            "image_data": f"data:image/png;base64,{r['image_base64']}",
+            "url": f"/api/sample-image/{r['sample_id']}"
+        }
+        for r in rows
+    ]
+
+
+def get_sample_image_by_id(sample_id: str, db_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    """Fetch a single sample image record by sample_id from the database."""
+    init_db(db_path)
+    conn = get_connection(db_path)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT sample_id, category, filename, description, image_base64
+        FROM sample_library
+        WHERE sample_id = ? OR filename = ?
+    """, (sample_id, sample_id))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        return dict(row)
+
+    # Fallback to catalog
+    for s in SAMPLE_IMAGE_DATABASE:
+        if s["sample_id"] == sample_id or s["filename"] == sample_id:
+            return s
+    return None
 
 
 def save_prediction(

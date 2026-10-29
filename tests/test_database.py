@@ -9,6 +9,8 @@ from src.database.db_manager import (
     fetch_all_predictions,
     get_summary_statistics,
     clear_history,
+    get_sample_images_by_category,
+    get_sample_image_by_id,
 )
 
 
@@ -50,3 +52,17 @@ def test_database_crud(temp_db):
     clear_history(temp_db)
     df_empty = fetch_all_predictions(temp_db)
     assert len(df_empty) == 0
+
+
+def test_sample_library_database(temp_db):
+    healthy_samples = get_sample_images_by_category("Healthy", db_path=temp_db)
+    abnormal_samples = get_sample_images_by_category("Abnormal", db_path=temp_db)
+    assert len(healthy_samples) >= 10
+    assert len(abnormal_samples) >= 10
+
+    first_id = healthy_samples[0]["sample_id"]
+    sample_rec = get_sample_image_by_id(first_id, db_path=temp_db)
+    assert sample_rec is not None
+    assert sample_rec["sample_id"] == first_id
+    assert sample_rec["category"] == "Healthy"
+    assert len(sample_rec["image_base64"]) > 100

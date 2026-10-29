@@ -57,6 +57,8 @@ from src.database.db_manager import (
     fetch_all_predictions,
     get_summary_statistics,
     clear_history,
+    get_sample_images_by_category,
+    get_sample_image_by_id,
 )
 from reports.generate_report import generate_pdf_report
 
@@ -97,62 +99,85 @@ def index():
 
 @app.route("/api/sample-images", methods=["GET"])
 def get_sample_images():
-    """Retrieve available benchmark library images for fast demo testing."""
+    """Retrieve available benchmark library images from the SQLite sample database."""
     category = request.args.get("category", "Healthy")
-    target_dir = config.TEST_DIR / category
-
-    if not target_dir.exists():
-        return jsonify({"samples": []})
-
-    samples = []
-    for p in sorted(target_dir.glob("*.png"))[:10]:
-        posix_rel = p.relative_to(config.BASE_DIR).as_posix()
-        samples.append({
-            "name": p.name,
-            "path": posix_rel,
-            "url": f"/api/image-preview?path={posix_rel}",
-        })
+    samples = get_sample_images_by_category(category)
     return jsonify({"samples": samples})
+
+
+@app.route("/api/sample-image/<sample_id>", methods=["GET"])
+def get_single_sample_image(sample_id):
+    """Serve image binary directly from sample database."""
+    sample = get_sample_image_by_id(sample_id)
+    if not sample:
+        stem = Path(sample_id).stem
+        sample = get_sample_image_by_id(stem)
+
+    if sample:
+        raw_bytes = base64.b64decode(sample["image_base64"])
+        return send_file(io.BytesIO(raw_bytes), mimetype="image/png")
+
+    return jsonify({"error": "Sample image not found in database"}), 404
 
 
 @app.route("/api/image-preview", methods=["GET"])
 def image_preview():
-    """Serve image preview from repository file path."""
+    """Serve image preview from database or repository file path."""
+    sample_id = request.args.get("sample_id")
     rel_path = request.args.get("path")
-    if not rel_path:
-        return "Missing path", 400
 
-    # Normalize backslashes from Windows/URL encodings to posix slashes
-    clean_rel = rel_path.replace("\\", "/").lstrip("/")
+    key = sample_id or rel_path
+    if not key:
+        return "Missing sample identifier", 400
+
+    stem = Path(key).stem
+    db_sample = get_sample_image_by_id(stem)
+    if db_sample:
+        raw_bytes = base64.b64decode(db_sample["image_base64"])
+        return send_file(io.BytesIO(raw_bytes), mimetype="image/png")
+
+    clean_rel = key.replace("\\", "/").lstrip("/")
     full_path = (config.BASE_DIR / clean_rel).resolve()
+    if str(full_path).startswith(str(config.BASE_DIR)) and full_path.exists():
+        return send_file(full_path, mimetype="image/png")
 
-    # Path traversal protection
-    if not str(full_path).startswith(str(config.BASE_DIR)):
-        return "Unauthorized path", 403
-
-    if not full_path.exists():
-        return "File not found", 404
-
-    return send_file(full_path, mimetype="image/png")
+    return "File not found", 404
 
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     """Execute complete multimodal AI analysis on a single cell."""
     try:
-        # 1. Resolve Image Input
+        # 1. Resolve Image Input from Upload or Database Library
         if "image_file" in request.files and request.files["image_file"].filename != "":
             file = request.files["image_file"]
             image_bytes = file.read()
             sample_id = Path(file.filename).stem
             raw_rgb = load_image(image_bytes)
+        elif "sample_id" in request.form and request.form["sample_id"]:
+            sample_id = request.form["sample_id"]
+            stem = Path(sample_id).stem
+            db_sample = get_sample_image_by_id(stem)
+            if db_sample:
+                raw_bytes = base64.b64decode(db_sample["image_base64"])
+                raw_rgb = load_image(raw_bytes)
+            else:
+                return jsonify({"error": f"Sample '{sample_id}' not found in database"}), 404
         elif "preset_path" in request.form and request.form["preset_path"]:
-            rel_path = request.form["preset_path"].replace("\\", "/").lstrip("/")
-            full_path = (config.BASE_DIR / rel_path).resolve()
-            if not full_path.exists() or not str(full_path).startswith(str(config.BASE_DIR)):
-                return jsonify({"error": "Invalid benchmark sample path"}), 400
-            sample_id = full_path.stem
-            raw_rgb = load_image(full_path)
+            preset_path = request.form["preset_path"]
+            stem = Path(preset_path).stem
+            db_sample = get_sample_image_by_id(stem)
+            if db_sample:
+                sample_id = db_sample["sample_id"]
+                raw_bytes = base64.b64decode(db_sample["image_base64"])
+                raw_rgb = load_image(raw_bytes)
+            else:
+                clean_rel = preset_path.replace("\\", "/").lstrip("/")
+                full_path = (config.BASE_DIR / clean_rel).resolve()
+                if not full_path.exists() or not str(full_path).startswith(str(config.BASE_DIR)):
+                    return jsonify({"error": "Invalid benchmark sample path"}), 400
+                sample_id = full_path.stem
+                raw_rgb = load_image(full_path)
         else:
             return jsonify({"error": "No image file or benchmark sample provided"}), 400
 
