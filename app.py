@@ -129,6 +129,8 @@ def favicon():
 
 @app.route("/")
 @app.route("/index")
+@app.route("/api")
+@app.route("/api/")
 @app.route("/api/index")
 @app.route("/api/index.py")
 def index():
@@ -136,6 +138,7 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/sample-images", methods=["GET"])
 @app.route("/api/sample-images", methods=["GET"])
 def get_sample_images():
     """Retrieve available benchmark library images directly from data/raw/test/."""
@@ -174,6 +177,7 @@ def get_sample_images():
     return jsonify({"samples": samples})
 
 
+@app.route("/sample-image/<sample_id>", methods=["GET"])
 @app.route("/api/sample-image/<sample_id>", methods=["GET"])
 def get_single_sample_image(sample_id):
     """Serve image binary directly from data/raw folder by sample_id."""
@@ -186,6 +190,7 @@ def get_single_sample_image(sample_id):
     return jsonify({"error": f"Sample image '{sample_id}' not found in data directory"}), 404
 
 
+@app.route("/image-preview", methods=["GET"])
 @app.route("/api/image-preview", methods=["GET"])
 def image_preview():
     """Serve image binary directly from repository data folder."""
@@ -218,6 +223,7 @@ def image_preview():
     return send_file(io.BytesIO(img_bytes), mimetype="image/png")
 
 
+@app.route("/analyze", methods=["POST"])
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     """Execute complete multimodal AI analysis on a single cell."""
@@ -443,6 +449,7 @@ def analyze():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/history", methods=["GET"])
 @app.route("/api/history", methods=["GET"])
 def get_history():
     """Retrieve audit history records and telemetry summary statistics."""
