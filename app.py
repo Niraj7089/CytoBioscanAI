@@ -146,6 +146,14 @@ def handle_404(e):
 @app.route("/api/index.py")
 def index():
     """Render the main interactive diagnostic studio dashboard."""
+    if "info" in request.args:
+        return jsonify({
+            "path": request.path,
+            "url": request.url,
+            "args": dict(request.args),
+            "headers": {k: v for k, v in request.headers.items()},
+            "environ": {k: str(v) for k, v in request.environ.items() if not k.startswith("werkzeug") and not k.startswith("wsgi.")},
+        })
     return render_template("index.html")
 
 
