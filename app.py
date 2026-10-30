@@ -129,11 +129,18 @@ def favicon():
 
 @app.route("/")
 @app.route("/index")
-@app.route("/api/index")
-@app.route("/api/index.py")
-@app.route("/api")
 def index():
     """Render the main interactive diagnostic studio dashboard."""
+    if request.args.get("debug") == "1" or (request.path.startswith("/api/") and request.path not in ("/api", "/api/")):
+        return jsonify({
+            "request_path": request.path,
+            "environ_PATH_INFO": request.environ.get("PATH_INFO"),
+            "environ_QUERY_STRING": request.environ.get("QUERY_STRING"),
+            "HTTP_X_MATCHED_PATH": request.environ.get("HTTP_X_MATCHED_PATH"),
+            "REQUEST_URI": request.environ.get("REQUEST_URI"),
+            "HTTP_X_FORWARDED_PATH": request.environ.get("HTTP_X_FORWARDED_PATH"),
+            "ALL_HTTP_HEADERS": {k: str(v) for k, v in request.environ.items() if k.startswith("HTTP_") or k in ("REQUEST_URI", "PATH_INFO", "RAW_URI")},
+        })
     return render_template("index.html")
 
 
