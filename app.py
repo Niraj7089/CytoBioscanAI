@@ -127,33 +127,12 @@ def favicon():
     return Response(status=204)
 
 
-@app.errorhandler(404)
-def handle_404(e):
-    return jsonify({
-        "error_404": True,
-        "request_path": request.path,
-        "request_url": request.url,
-        "environ_PATH_INFO": request.environ.get("PATH_INFO"),
-        "environ_SCRIPT_NAME": request.environ.get("SCRIPT_NAME"),
-        "environ_REQUEST_URI": request.environ.get("REQUEST_URI"),
-        "environ_HTTP_X_MATCHED_PATH": request.environ.get("HTTP_X_MATCHED_PATH"),
-    }), 404
-
-
 @app.route("/")
 @app.route("/index")
 @app.route("/api/index")
 @app.route("/api/index.py")
 def index():
     """Render the main interactive diagnostic studio dashboard."""
-    if "info" in request.args:
-        return jsonify({
-            "path": request.path,
-            "url": request.url,
-            "args": dict(request.args),
-            "headers": {k: v for k, v in request.headers.items()},
-            "environ": {k: str(v) for k, v in request.environ.items() if not k.startswith("werkzeug") and not k.startswith("wsgi.")},
-        })
     return render_template("index.html")
 
 
