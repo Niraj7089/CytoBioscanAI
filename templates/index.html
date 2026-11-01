@@ -2,7 +2,7 @@
 <html lang="en" class="h-full bg-[#f8f9fa]">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>AI Single-Cell Diagnosis Prototype</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,22 +13,30 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .main-header {
-            font-size: 2.1rem;
-            font-weight: 700;
+            font-size: clamp(1.35rem, 3.8vw, 2.15rem);
+            font-weight: 800;
             color: #0D3B66;
-            margin-bottom: 0.2rem;
+            margin-bottom: 0.25rem;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
         }
         .sub-header {
-            font-size: 1.05rem;
+            font-size: clamp(0.8rem, 1.8vw, 1.05rem);
             color: #4A5568;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
+            line-height: 1.45;
         }
         .metric-card {
             background-color: #F8FAFC;
             border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            padding: 1.2rem;
+            border-radius: 10px;
+            padding: 1rem;
             text-align: center;
+        }
+        @media (min-width: 640px) {
+            .metric-card {
+                padding: 1.25rem;
+            }
         }
         .status-healthy {
             background-color: #E8F8F5;
@@ -36,7 +44,7 @@
             padding: 0.4rem 1.2rem;
             border-radius: 6px;
             font-weight: 700;
-            font-size: 1.35rem;
+            font-size: clamp(1.1rem, 2.5vw, 1.35rem);
             display: inline-block;
             border: 1px solid #A2D9CE;
         }
@@ -46,53 +54,81 @@
             padding: 0.4rem 1.2rem;
             border-radius: 6px;
             font-weight: 700;
-            font-size: 1.35rem;
+            font-size: clamp(1.1rem, 2.5vw, 1.35rem);
             display: inline-block;
             border: 1px solid #F5B7B1;
         }
+        /* Touch and scrollbar utilities */
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
         /* Streamlit radio button style */
         .st-radio input[type="radio"] {
             accent-color: #ff4b4b;
         }
     </style>
 </head>
-<body class="h-full flex text-slate-800 antialiased">
+<body class="min-h-screen bg-[#f8f9fa] text-slate-800 antialiased flex flex-col lg:flex-row">
 
-    <!-- ==================== STREAMLIT-STYLE LEFT SIDEBAR ==================== -->
-    <aside class="w-72 bg-[#f0f2f6] border-r border-slate-200 p-5 flex flex-col justify-between shrink-0 min-h-screen">
+    <!-- ==================== MOBILE TOP NAVIGATION BAR (Visible on < lg screens) ==================== -->
+    <header class="lg:hidden sticky top-0 z-30 bg-[#f0f2f6]/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs">
+        <div class="flex items-center space-x-2.5">
+            <button type="button" onclick="openMobileSidebar()" aria-label="Toggle Navigation Menu" class="p-2 -ml-1 text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 rounded-lg transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <img src="https://img.icons8.com/fluency/96/microscope.png" alt="Microscope" class="w-7 h-7">
+                <span class="font-bold text-slate-900 text-sm tracking-tight">CytoBioScan AI</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span id="mobile-module-pill" class="text-[10px] font-semibold bg-red-100 text-red-700 border border-red-200 px-2.5 py-0.5 rounded-full">Live Analysis</span>
+        </div>
+    </header>
+
+    <!-- Mobile Drawer Backdrop Overlay -->
+    <div id="sidebar-backdrop" onclick="closeMobileSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 hidden lg:hidden transition-opacity duration-300 opacity-0"></div>
+
+    <!-- ==================== RESPONSIVE SIDEBAR (Drawer on mobile <lg, Docked on desktop >=lg) ==================== -->
+    <aside id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-72 bg-[#f0f2f6] border-r border-slate-200 p-5 flex flex-col justify-between shrink-0 transform -translate-x-full lg:translate-x-0 lg:static lg:min-h-screen transition-transform duration-300 ease-in-out overflow-y-auto">
         <div class="space-y-6">
-            <!-- Icon -->
-            <div class="flex items-center space-x-3">
-                <img src="https://img.icons8.com/fluency/96/microscope.png" alt="Microscope" class="w-12 h-12">
-                <div>
-                    <h1 class="text-base font-bold text-slate-900 leading-tight">CytoBioScan AI</h1>
-                    <span class="text-xs text-slate-500 font-medium">Research Prototype</span>
+            <!-- Icon & Branding with Mobile Close Button -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <img src="https://img.icons8.com/fluency/96/microscope.png" alt="Microscope" class="w-10 h-10 sm:w-12 sm:h-12">
+                    <div>
+                        <h1 class="text-base font-bold text-slate-900 leading-tight">CytoBioScan AI</h1>
+                        <span class="text-xs text-slate-500 font-medium">Research Prototype</span>
+                    </div>
                 </div>
+                <!-- Close Button (Mobile Only) -->
+                <button type="button" onclick="closeMobileSidebar()" aria-label="Close Navigation" class="lg:hidden p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition active:scale-95">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
 
             <!-- Navigation Title -->
             <div class="pt-2">
-                <h2 class="text-lg font-bold text-slate-900 mb-3">Navigation</h2>
-                <div class="space-y-2">
-                    <label class="flex items-center space-x-3 p-2 rounded-lg cursor-pointer hover:bg-slate-200/60 transition" onclick="switchModule('analysis')">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Workspace Navigation</h2>
+                <div class="space-y-1.5">
+                    <label class="flex items-center space-x-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-200/70 transition" onclick="switchModule('analysis')">
                         <input type="radio" name="sidebar-module" id="radio-analysis" checked class="w-4 h-4 text-red-500 focus:ring-red-500 accent-[#ff4b4b]">
-                        <span class="text-sm font-medium text-slate-800">Single-Cell Live Analysis</span>
+                        <span class="text-sm font-semibold text-slate-800">Single-Cell Live Analysis</span>
                     </label>
-                    <label class="flex items-center space-x-3 p-2 rounded-lg cursor-pointer hover:bg-slate-200/60 transition" onclick="switchModule('history')">
+                    <label class="flex items-center space-x-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-200/70 transition" onclick="switchModule('history')">
                         <input type="radio" name="sidebar-module" id="radio-history" class="w-4 h-4 text-red-500 focus:ring-red-500 accent-[#ff4b4b]">
-                        <span class="text-sm font-medium text-slate-800">Audit Log & History</span>
+                        <span class="text-sm font-semibold text-slate-800">Audit Log &amp; History</span>
                     </label>
-                    <label class="flex items-center space-x-3 p-2 rounded-lg cursor-pointer hover:bg-slate-200/60 transition" onclick="switchModule('specs')">
+                    <label class="flex items-center space-x-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-200/70 transition" onclick="switchModule('specs')">
                         <input type="radio" name="sidebar-module" id="radio-specs" class="w-4 h-4 text-red-500 focus:ring-red-500 accent-[#ff4b4b]">
-                        <span class="text-sm font-medium text-slate-800">Architecture & Diagnostics</span>
+                        <span class="text-sm font-semibold text-slate-800">Architecture &amp; Diagnostics</span>
                     </label>
                 </div>
             </div>
 
             <!-- Sidebar Info Divider -->
             <hr class="border-slate-300">
-            <div class="space-y-2 text-xs text-slate-600">
-                <div class="flex items-center justify-between">
+            <div class="space-y-2 text-xs text-slate-600 bg-white/70 p-3.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
                     <p class="font-bold text-slate-700">🔬 System Specifications</p>
                     <span class="text-[10px] bg-amber-100 text-amber-800 font-semibold px-1.5 py-0.5 rounded border border-amber-200">Simulated</span>
                 </div>
@@ -104,50 +140,58 @@
             </div>
         </div>
 
-        <div class="text-[11px] text-slate-500 pt-6 border-t border-slate-300">
+        <div class="text-[11px] text-slate-500 pt-5 mt-4 border-t border-slate-300">
             <span class="font-semibold text-slate-600 block mb-0.5">Computational Research Prototype</span>
             Simulated Sensor &amp; Diagnostic Environment
         </div>
     </aside>
 
     <!-- ==================== MAIN CONTENT AREA ==================== -->
-    <main class="flex-1 overflow-y-auto px-6 sm:px-10 py-6 max-w-6xl">
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-5 sm:py-6 lg:py-8 overflow-y-auto">
 
         <!-- Header -->
         <div class="main-header">🔬 AI-Assisted Single-Cell Diagnostic System</div>
-        <div class="sub-header mb-6">Multimodal Biosensing Platform Integrating Optical Microscopy & Electrochemical Impedance Detection</div>
+        <div class="sub-header">Multimodal Biosensing Platform Integrating Optical Microscopy &amp; Electrochemical Impedance Detection</div>
 
         <!-- ==================== MODULE 1: SINGLE-CELL LIVE ANALYSIS ==================== -->
         <div id="module-analysis" class="space-y-6">
-            <h3 class="text-xl font-bold text-slate-900">Single-Cell Specimen Analysis</h3>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                <h3 class="text-lg sm:text-xl font-bold text-slate-900">Single-Cell Specimen Analysis</h3>
+                <span class="hidden sm:inline-flex items-center text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
+                    <i class="fa-solid fa-microchip mr-1.5 text-slate-400"></i> Dual-Modal Input
+                </span>
+            </div>
 
-            <!-- Two-Column Inputs: Optical vs Sensor -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Two-Column Adaptive Inputs: Optical vs Sensor -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
                 <!-- Left Column: 1. Optical Microscopy Input -->
-                <div class="space-y-4">
-                    <h4 class="text-base font-bold text-slate-900 pb-1 border-b border-slate-200">1. Optical Microscopy Input</h4>
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
+                    <h4 class="text-sm font-bold text-slate-900 pb-2 border-b border-slate-100 flex items-center justify-between">
+                        <span>1. Optical Microscopy Input</span>
+                        <i class="fa-solid fa-camera text-slate-400"></i>
+                    </h4>
 
                     <!-- Radio: Image Input Source -->
-                    <div class="space-y-1">
+                    <div class="space-y-1.5">
                         <label class="block text-xs font-bold text-slate-700">Image Input Source:</label>
-                        <div class="flex items-center space-x-6 pt-1">
-                            <label class="flex items-center space-x-2 text-sm text-slate-800 cursor-pointer">
-                                <input type="radio" name="image-source" value="library" checked onchange="toggleImageSource('library')" class="accent-[#ff4b4b]">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-6 pt-0.5">
+                            <label class="flex items-center space-x-2 text-xs sm:text-sm text-slate-800 cursor-pointer">
+                                <input type="radio" name="image-source" value="library" checked onchange="toggleImageSource('library')" class="w-4 h-4 accent-[#ff4b4b]">
                                 <span>Choose from Test Library</span>
                             </label>
-                            <label class="flex items-center space-x-2 text-sm text-slate-800 cursor-pointer">
-                                <input type="radio" name="image-source" value="upload" onchange="toggleImageSource('upload')" class="accent-[#ff4b4b]">
+                            <label class="flex items-center space-x-2 text-xs sm:text-sm text-slate-800 cursor-pointer">
+                                <input type="radio" name="image-source" value="upload" onchange="toggleImageSource('upload')" class="w-4 h-4 accent-[#ff4b4b]">
                                 <span>Upload Image File (.png, .jpg)</span>
                             </label>
                         </div>
                     </div>
 
                     <!-- Mode A: Choose from Library -->
-                    <div id="box-image-library" class="space-y-3 pt-2">
+                    <div id="box-image-library" class="space-y-3 pt-1">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Select Target Class:</label>
-                            <select id="select-target-class" onchange="onClassChange()" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+                            <select id="select-target-class" onchange="onClassChange()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition">
                                 <option value="Healthy">Healthy (Uninfected RBC)</option>
                                 <option value="Abnormal">Abnormal (Parasitized RBC)</option>
                             </select>
@@ -155,212 +199,218 @@
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Select Benchmark Cell Sample:</label>
-                            <select id="select-sample-file" onchange="onSampleChange()" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 font-mono text-xs">
+                            <select id="select-sample-file" onchange="onSampleChange()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition">
                                 <!-- Populated dynamically -->
                             </select>
                         </div>
                     </div>
 
                     <!-- Mode B: Upload Image -->
-                    <div id="box-image-upload" class="hidden space-y-2 pt-2">
+                    <div id="box-image-upload" class="hidden space-y-2 pt-1">
                         <label class="block text-xs font-bold text-slate-700">Upload Single-Cell Micrograph</label>
-                        <div id="drop-zone-image" onclick="document.getElementById('upload-cell-file').click()" class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-lg p-5 text-center cursor-pointer bg-white transition hover:bg-slate-50">
+                        <div id="drop-zone-image" onclick="document.getElementById('upload-cell-file').click()" class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-xl p-4 sm:p-6 text-center cursor-pointer bg-slate-50/60 hover:bg-slate-50 transition">
                             <input type="file" id="upload-cell-file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
-                            <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl sm:text-3xl text-slate-400 mb-1.5"></i>
                             <p class="text-xs text-slate-700 font-semibold">Click to browse or drag &amp; drop micrograph here</p>
-                            <p class="text-[11px] text-slate-400 mt-1">Accepts PNG, JPG, JPEG, TIFF, BMP</p>
+                            <p class="text-[11px] text-slate-400 mt-0.5">Accepts PNG, JPG, JPEG, TIFF, BMP</p>
                         </div>
-                        <div id="upload-image-status" class="min-h-[22px]"></div>
+                        <div id="upload-image-status" class="min-h-[20px]"></div>
                     </div>
 
-                    <!-- Selected Image Preview -->
-                    <div class="pt-2">
-                        <p class="text-xs font-semibold text-slate-500 mb-1.5">Micrograph Specimen Preview:</p>
-                        <div class="w-28 h-28 bg-white border border-slate-300 rounded-md overflow-hidden flex items-center justify-center shadow-sm">
-                            <img id="input-preview-img" src="" alt="Preview" class="w-full h-full object-cover">
+                    <!-- Selected Image Preview with responsive card layout -->
+                    <div class="pt-1 border-t border-slate-100">
+                        <div class="flex items-start space-x-3 sm:space-x-4">
+                            <div class="w-20 h-20 sm:w-24 sm:h-24 bg-slate-100 border border-slate-300 rounded-lg overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
+                                <img id="input-preview-img" src="" alt="Preview" class="w-full h-full object-cover">
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Micrograph Specimen:</p>
+                                <p id="input-preview-label" class="text-xs text-slate-700 font-mono break-all line-clamp-3 leading-relaxed"></p>
+                            </div>
                         </div>
-                        <p id="input-preview-label" class="text-xs text-slate-600 font-mono mt-1 truncate max-w-xs"></p>
                     </div>
                 </div>
 
                 <!-- Right Column: 2. Electrochemical Sensor Input -->
-                <div class="space-y-4">
-                    <h4 class="text-base font-bold text-slate-900 pb-1 border-b border-slate-200">2. Electrochemical Sensor Input</h4>
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
+                    <h4 class="text-sm font-bold text-slate-900 pb-2 border-b border-slate-100 flex items-center justify-between">
+                        <span>2. Electrochemical Sensor Input</span>
+                        <i class="fa-solid fa-bolt text-slate-400"></i>
+                    </h4>
 
                     <!-- Radio: Sensor Data Source -->
-                    <div class="space-y-1">
+                    <div class="space-y-1.5">
                         <label class="block text-xs font-bold text-slate-700">Sensor Data Source:</label>
-                        <div class="flex items-center space-x-6 pt-1">
-                            <label class="flex items-center space-x-2 text-sm text-slate-800 cursor-pointer">
-                                <input type="radio" name="sensor-source" value="simulate" checked onchange="toggleSensorSource('simulate')" class="accent-[#ff4b4b]">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-6 pt-0.5">
+                            <label class="flex items-center space-x-2 text-xs sm:text-sm text-slate-800 cursor-pointer">
+                                <input type="radio" name="sensor-source" value="simulate" checked onchange="toggleSensorSource('simulate')" class="w-4 h-4 accent-[#ff4b4b]">
                                 <span>Simulate Realistic Electrochemical Signal</span>
                             </label>
-                            <label class="flex items-center space-x-2 text-sm text-slate-800 cursor-pointer">
-                                <input type="radio" name="sensor-source" value="upload-csv" onchange="toggleSensorSource('upload-csv')" class="accent-[#ff4b4b]">
+                            <label class="flex items-center space-x-2 text-xs sm:text-sm text-slate-800 cursor-pointer">
+                                <input type="radio" name="sensor-source" value="upload-csv" onchange="toggleSensorSource('upload-csv')" class="w-4 h-4 accent-[#ff4b4b]">
                                 <span>Upload Custom Sensor CSV</span>
                             </label>
                         </div>
                     </div>
 
                     <!-- Mode A: Simulate Controls -->
-                    <div id="box-sensor-simulate" class="space-y-3 pt-2">
+                    <div id="box-sensor-simulate" class="space-y-3 pt-1">
                         <!-- Info Box -->
-                        <div class="bg-[#d1ecf1] border-l-4 border-[#0c5460] p-3 rounded text-xs text-[#0c5460] font-medium">
+                        <div class="bg-[#d1ecf1]/70 border-l-4 border-[#0c5460] p-3 rounded-r-lg text-xs text-[#0c5460] font-medium leading-relaxed">
                             Simulating Cyclic Voltammetry (CV) &amp; Impedance Spectroscopy (EIS) across gold microelectrodes.
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Simulate Cell Membrane Condition:</label>
-                            <select id="select-membrane-condition" class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+                            <select id="select-membrane-condition" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition">
                                 <option value="Healthy">Healthy (Intact Membrane)</option>
                                 <option value="Abnormal">Abnormal (Compromised Membrane)</option>
                             </select>
                         </div>
 
                         <div>
-                            <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                            <div class="flex justify-between items-center text-xs font-bold text-slate-700 mb-1">
                                 <span>Electrochemical Noise Level (%):</span>
-                                <span id="noise-display" class="text-red-500 font-mono">4.0%</span>
+                                <span id="noise-display" class="text-red-500 font-mono text-xs px-2 py-0.5 bg-red-50 border border-red-200 rounded">4.0%</span>
                             </div>
                             <input type="range" id="slider-noise" min="1.0" max="15.0" step="0.5" value="4.0" class="w-full accent-[#ff4b4b] cursor-pointer" oninput="document.getElementById('noise-display').innerText = this.value + '%'">
                         </div>
                     </div>
 
                     <!-- Mode B: Upload Sensor CSV -->
-                    <div id="box-sensor-csv" class="hidden space-y-2 pt-2">
+                    <div id="box-sensor-csv" class="hidden space-y-2 pt-1">
                         <label class="block text-xs font-bold text-slate-700">Upload Sensor Measurement CSV</label>
-                        <div id="drop-zone-csv" onclick="document.getElementById('upload-sensor-file').click()" class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-lg p-5 text-center cursor-pointer bg-white transition hover:bg-slate-50">
+                        <div id="drop-zone-csv" onclick="document.getElementById('upload-sensor-file').click()" class="border-2 border-dashed border-slate-300 hover:border-red-400 rounded-xl p-4 sm:p-6 text-center cursor-pointer bg-slate-50/60 hover:bg-slate-50 transition">
                             <input type="file" id="upload-sensor-file" accept=".csv" class="hidden" onchange="handleCsvUpload(event)">
-                            <i class="fa-solid fa-file-csv text-3xl text-emerald-600 mb-2"></i>
+                            <i class="fa-solid fa-file-csv text-2xl sm:text-3xl text-emerald-600 mb-1.5"></i>
                             <p class="text-xs text-slate-700 font-semibold">Click to browse or drag &amp; drop CSV here</p>
-                            <p id="sensor-csv-name" class="text-[11px] text-slate-400 mt-1">CSV with peak_anodic_current, rct, etc.</p>
+                            <p id="sensor-csv-name" class="text-[11px] text-slate-400 mt-0.5">CSV with peak_anodic_current, rct, etc.</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Bottom Notes Input -->
-            <hr class="border-slate-300 my-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Analyst Observations / Study Notes:</label>
-                <input type="text" id="input-notes" placeholder="E.g., In-vitro assay batch #4, 37°C incubation." class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+            <div class="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Analyst Observations / Study Notes:</label>
+                <input type="text" id="input-notes" placeholder="E.g., In-vitro assay batch #4, 37°C incubation." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition">
             </div>
 
             <!-- Active Specimen Banner -->
-            <div id="active-specimen-banner" class="flex items-center justify-between text-xs px-3 py-2 rounded bg-slate-100 border border-slate-200">
-                <span class="flex items-center text-slate-600 font-semibold">
+            <div id="active-specimen-banner" class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs px-3.5 py-2.5 rounded-lg bg-slate-100 border border-slate-200">
+                <span class="flex items-center text-slate-600 font-semibold shrink-0">
                     <i class="fa-solid fa-microscope text-red-500 mr-2"></i> Ready Specimen:
                 </span>
-                <span id="active-specimen-label" class="font-mono text-slate-800 font-medium truncate max-w-sm">Initializing sample library...</span>
+                <span id="active-specimen-label" class="font-mono text-slate-800 font-medium truncate sm:max-w-md">Initializing sample library...</span>
             </div>
 
             <!-- Big Action Button -->
-            <button onclick="executeAnalysis()" id="btn-run-analysis" class="w-full py-3 px-4 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white font-bold text-base rounded-md shadow transition flex items-center justify-center space-x-2">
-                <span>🚀 Run Multimodal AI Analysis</span>
+            <button onclick="executeAnalysis()" id="btn-run-analysis" class="w-full py-3.5 px-4 bg-[#ff4b4b] hover:bg-[#e03a3a] active:scale-[0.99] text-white font-bold text-sm sm:text-base rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2">
+                <span>🚀 Run Multimodal AI Diagnostic Scan</span>
             </button>
 
             <!-- Loading Spinner -->
-            <div id="loading-box" class="hidden text-center py-6 space-y-2">
-                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-red-500"></i>
-                <p class="text-sm font-semibold text-slate-700">Processing optical micrograph, segmenting cell, and performing multimodal AI inference...</p>
+            <div id="loading-box" class="hidden text-center py-6 sm:py-8 space-y-2.5">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl sm:text-4xl text-red-500"></i>
+                <p class="text-xs sm:text-sm font-semibold text-slate-700">Processing optical micrograph, segmenting cell, and performing multimodal AI inference...</p>
             </div>
 
             <!-- ==================== STREAMLIT-STYLE RESULTS ==================== -->
             <div id="results-box" class="hidden space-y-6 pt-4">
 
                 <!-- Success Alert -->
-                <div id="alert-success" class="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm px-4 py-3 rounded font-medium flex flex-wrap items-center justify-between gap-2">
+                <div id="alert-success" class="bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs sm:text-sm px-4 py-3 rounded-xl font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
                     <div>
-                        Analysis complete for sample <strong id="res-sample-name"></strong> (Audit Record #<span id="res-record-id"></span>)
+                        Analysis complete for sample <strong id="res-sample-name" class="font-mono"></strong> (Audit Record #<span id="res-record-id"></span>)
                     </div>
-                    <span id="res-data-source-badge" class="inline-flex items-center text-xs bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-semibold">
+                    <span id="res-data-source-badge" class="inline-flex items-center text-xs bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-semibold shrink-0">
                         <i class="fa-solid fa-database mr-1.5 text-emerald-600"></i> <span id="res-data-source-text">Dataset Record (sensor_data.csv)</span>
                     </span>
                 </div>
 
-                <!-- 3 Top Metric Columns -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <!-- 3 Top Metric Cards (Responsive Grid: 1 col on mobile, 3 on sm/md/lg) -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5">
                     <!-- Column 1: Classification -->
-                    <div class="metric-card">
-                        <div class="text-xs font-semibold text-slate-500 mb-2">Multimodal Classification</div>
+                    <div class="metric-card shadow-2xs">
+                        <div class="text-[11px] sm:text-xs font-semibold text-slate-500 mb-2">Multimodal Classification</div>
                         <div id="badge-verdict" class="status-healthy">HEALTHY</div>
-                        <div class="text-xs text-slate-400 mt-2">Morphological + Electrochemical Consensus</div>
+                        <div class="text-[11px] text-slate-400 mt-2">Morphological + Electrochemical Consensus</div>
                     </div>
 
                     <!-- Column 2: Confidence -->
-                    <div class="metric-card">
-                        <div class="text-xs font-semibold text-slate-500 mb-1">Model Confidence</div>
-                        <div id="text-confidence" class="text-3xl font-bold text-[#0D3B66]">--%</div>
-                        <div id="text-posterior" class="text-xs text-slate-400 mt-1">Posterior Probability: --</div>
+                    <div class="metric-card shadow-2xs">
+                        <div class="text-[11px] sm:text-xs font-semibold text-slate-500 mb-1">Model Confidence</div>
+                        <div id="text-confidence" class="text-2xl sm:text-3xl font-extrabold text-[#0D3B66]">--%</div>
+                        <div id="text-posterior" class="text-[11px] text-slate-400 mt-1">Posterior Probability: --</div>
                     </div>
 
                     <!-- Column 3: Risk Score -->
-                    <div class="metric-card">
-                        <div class="text-xs font-semibold text-slate-500 mb-1">Research Risk Score</div>
-                        <div class="text-3xl font-bold text-[#145A32]" id="text-risk-score">-- <small class="text-xs text-slate-500 font-normal">/ 1.00</small></div>
-                        <div id="text-risk-desc" class="text-xs text-slate-500 mt-1 font-semibold">Low Anomaly</div>
+                    <div class="metric-card shadow-2xs">
+                        <div class="text-[11px] sm:text-xs font-semibold text-slate-500 mb-1">Research Risk Score</div>
+                        <div class="text-2xl sm:text-3xl font-extrabold text-[#145A32]" id="text-risk-score">-- <small class="text-xs text-slate-500 font-normal">/ 1.00</small></div>
+                        <div id="text-risk-desc" class="text-[11px] text-slate-500 mt-1 font-semibold">Low Anomaly</div>
                     </div>
                 </div>
 
                 <hr class="border-slate-300">
 
-                <!-- Tabs: Multi-Technique Workstation Navigation -->
+                <!-- Tabs: Multi-Technique Workstation Navigation (Horizontal scrollable with touch-friendly pills) -->
                 <div class="border-b border-slate-200">
-                    <nav class="flex space-x-6 text-xs sm:text-sm font-bold overflow-x-auto pb-1">
-                        <button onclick="switchResultTab('tab-img')" id="btn-tab-img" class="pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2 whitespace-nowrap">
-                            <span>🔬 Microscopy &amp; Segmentation</span>
+                    <nav class="flex space-x-2 sm:space-x-4 text-xs sm:text-sm font-bold overflow-x-auto pb-1 scrollbar-none -mx-2 px-2">
+                        <button onclick="switchResultTab('tab-img')" id="btn-tab-img" class="pb-2.5 sm:pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-1.5 whitespace-nowrap">
+                            <span>🔬 Microscopy</span>
                         </button>
-                        <button onclick="switchResultTab('tab-secm')" id="btn-tab-secm" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap">
-                            <span>🌐 Scanning Probe (SECM)</span>
+                        <button onclick="switchResultTab('tab-secm')" id="btn-tab-secm" class="pb-2.5 sm:pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
+                            <span>🌐 SECM Probe</span>
                         </button>
-                        <button onclick="switchResultTab('tab-voltammetry')" id="btn-tab-voltammetry" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap">
-                            <span>⚡ Voltammetry (CV &amp; DPV)</span>
+                        <button onclick="switchResultTab('tab-voltammetry')" id="btn-tab-voltammetry" class="pb-2.5 sm:pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
+                            <span>⚡ Voltammetry (CV/DPV)</span>
                         </button>
-                        <button onclick="switchResultTab('tab-eis')" id="btn-tab-eis" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap">
+                        <button onclick="switchResultTab('tab-eis')" id="btn-tab-eis" class="pb-2.5 sm:pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
                             <span>📈 Impedance (EIS)</span>
                         </button>
-                        <button onclick="switchResultTab('tab-ca')" id="btn-tab-ca" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap">
-                            <span>⏱️ Chronoamperometry (CA)</span>
+                        <button onclick="switchResultTab('tab-ca')" id="btn-tab-ca" class="pb-2.5 sm:pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 whitespace-nowrap">
+                            <span>⏱️ Chronoamperometry</span>
                         </button>
                     </nav>
                 </div>
 
                 <!-- Tab 1: Optical Microscopy & Segmentation -->
                 <div id="content-tab-img" class="space-y-4 pt-2">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="space-y-1 text-center">
-                            <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
-                                <img id="res-img-raw" src="" class="w-full aspect-square object-cover rounded">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                        <div class="space-y-1.5 text-center">
+                            <div class="bg-white p-2 border border-slate-300 rounded-lg shadow-xs">
+                                <img id="res-img-raw" src="" class="w-full aspect-square object-cover rounded-md">
                             </div>
-                            <span class="text-xs font-medium text-slate-600">Raw Optical Micrograph</span>
+                            <span class="text-xs font-semibold text-slate-600 block">Raw Optical Micrograph</span>
                         </div>
-                        <div class="space-y-1 text-center">
-                            <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
-                                <img id="res-img-enhanced" src="" class="w-full aspect-square object-cover rounded">
+                        <div class="space-y-1.5 text-center">
+                            <div class="bg-white p-2 border border-slate-300 rounded-lg shadow-xs">
+                                <img id="res-img-enhanced" src="" class="w-full aspect-square object-cover rounded-md">
                             </div>
-                            <span class="text-xs font-medium text-slate-600">Contrast Enhanced (CLAHE)</span>
+                            <span class="text-xs font-semibold text-slate-600 block">Contrast Enhanced (CLAHE)</span>
                         </div>
-                        <div class="space-y-1 text-center">
-                            <div class="bg-white p-2 border border-slate-300 rounded shadow-sm">
-                                <img id="res-img-overlay" src="" class="w-full aspect-square object-cover rounded">
+                        <div class="space-y-1.5 text-center sm:col-span-2 md:col-span-1">
+                            <div class="bg-white p-2 border border-slate-300 rounded-lg shadow-xs">
+                                <img id="res-img-overlay" src="" class="w-full aspect-square object-cover rounded-md">
                             </div>
-                            <span class="text-xs font-medium text-slate-600">Morphological Boundary Outline</span>
+                            <span class="text-xs font-semibold text-slate-600 block">Morphological Boundary Outline</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tab 2: Scanning Electrochemical Microscopy (e-SPM / SECM) -->
                 <div id="content-tab-secm" class="hidden space-y-4 pt-2">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                         <!-- SECM 2D Localized Reactivity Raster -->
-                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm space-y-3">
+                        <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs space-y-3">
                             <div class="flex items-center justify-between">
                                 <h5 class="text-xs font-bold text-slate-800">2D SECM Faradaic Current Topography</h5>
                                 <span id="secm-contrast-badge" class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Contrast: --%</span>
                             </div>
                             <div class="flex flex-col items-center">
-                                <canvas id="canvas-secm-heatmap" width="240" height="240" class="border border-slate-300 rounded shadow-inner"></canvas>
-                                <div class="w-full max-w-xs flex items-center justify-between text-[10px] text-slate-500 font-mono mt-1">
+                                <canvas id="canvas-secm-heatmap" width="240" height="240" class="w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] border border-slate-300 rounded shadow-inner"></canvas>
+                                <div class="w-full max-w-[240px] flex items-center justify-between text-[10px] text-slate-500 font-mono mt-1">
                                     <span>-10 µm (X)</span>
                                     <span>0</span>
                                     <span>+10 µm</span>
@@ -374,12 +424,12 @@
                         </div>
 
                         <!-- SECM Approach Curve -->
-                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm space-y-2">
+                        <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs space-y-2">
                             <div class="flex items-center justify-between mb-1">
                                 <h5 class="text-xs font-bold text-slate-800">SECM Approach Curve (I/I_inf vs d/a)</h5>
                                 <span id="secm-feedback-badge" class="text-[10px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Feedback: --</span>
                             </div>
-                            <div class="h-56">
+                            <div class="relative h-48 sm:h-56 w-full">
                                 <canvas id="chart-secm-approach"></canvas>
                             </div>
                             <p class="text-[10px] text-slate-500 italic text-center">Pt microelectrode (a = 1.0 µm) approaching single erythrocyte membrane.</p>
@@ -389,22 +439,22 @@
 
                 <!-- Tab 3: Voltammetry Suite (CV & DPV) -->
                 <div id="content-tab-voltammetry" class="hidden space-y-4 pt-2">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs">
                             <div class="flex items-center justify-between mb-2">
                                 <h5 class="text-xs font-bold text-slate-800">Cyclic Voltammogram (CV)</h5>
                                 <span id="cv-peaks-badge" class="text-[10px] text-slate-500 font-mono">ΔEp: -- mV</span>
                             </div>
-                            <div class="h-56">
+                            <div class="relative h-48 sm:h-56 w-full">
                                 <canvas id="chart-cv"></canvas>
                             </div>
                         </div>
-                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                        <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs">
                             <div class="flex items-center justify-between mb-2">
                                 <h5 class="text-xs font-bold text-slate-800">Differential Pulse Voltammetry (DPV)</h5>
                                 <span id="dpv-peak-badge" class="text-[10px] text-slate-500 font-mono">ΔIp: -- µA</span>
                             </div>
-                            <div class="h-56">
+                            <div class="relative h-48 sm:h-56 w-full">
                                 <canvas id="chart-dpv"></canvas>
                             </div>
                         </div>
@@ -413,16 +463,16 @@
 
                 <!-- Tab 4: Impedance Spectroscopy (EIS) -->
                 <div id="content-tab-eis" class="hidden space-y-4 pt-2">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs">
                             <h5 class="text-xs font-bold text-slate-800 text-center mb-2">Nyquist Complex Spectrum (-Z'' vs Z')</h5>
-                            <div class="h-56">
+                            <div class="relative h-48 sm:h-56 w-full">
                                 <canvas id="chart-eis"></canvas>
                             </div>
                         </div>
-                        <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                        <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs">
                             <h5 class="text-xs font-bold text-slate-800 text-center mb-2">Bode Spectrum (|Z| &amp; Phase Angle vs log f)</h5>
-                            <div class="h-56">
+                            <div class="relative h-48 sm:h-56 w-full">
                                 <canvas id="chart-bode"></canvas>
                             </div>
                         </div>
@@ -431,62 +481,66 @@
 
                 <!-- Tab 5: Chronoamperometry (CA) -->
                 <div id="content-tab-ca" class="hidden space-y-4 pt-2">
-                    <div class="bg-white p-4 border border-slate-300 rounded shadow-sm">
+                    <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs">
                         <div class="flex items-center justify-between mb-2">
                             <h5 class="text-xs font-bold text-slate-800">Cottrell Chronoamperometric Transient (I vs t)</h5>
                             <span class="text-[10px] text-slate-500 font-mono">Step Potential: +0.40 V</span>
                         </div>
-                        <div class="h-60">
+                        <div class="relative h-52 sm:h-60 w-full">
                             <canvas id="chart-ca"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- Quantitative Breakdown Tables (2 columns side-by-side) -->
-                <div class="pt-4 space-y-2">
+                <!-- Quantitative Breakdown Tables (Adaptive 2 columns) -->
+                <div class="pt-2 space-y-2">
                     <h4 class="text-sm font-bold text-slate-900">Quantitative Multimodal &amp; Instrument Biomarkers</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 
                         <!-- Left Table: Morphological & Texture -->
-                        <div class="bg-white border border-slate-300 rounded overflow-hidden shadow-sm">
-                            <div class="bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 border-b border-slate-300">
+                        <div class="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs">
+                            <div class="bg-slate-100 px-3.5 py-2.5 text-xs font-bold text-slate-700 border-b border-slate-300">
                                 Morphological &amp; Optical Descriptors
                             </div>
-                            <table class="w-full text-xs text-left">
-                                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
-                                    <tr><th class="py-1.5 px-3">Biomarker</th><th class="py-1.5 px-3 text-right">Value</th></tr>
-                                </thead>
-                                <tbody id="table-img-metrics" class="divide-y divide-slate-100 text-slate-700 font-mono">
-                                    <!-- Populated dynamically -->
-                                </tbody>
-                            </table>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-left min-w-[260px]">
+                                    <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                        <tr><th class="py-2 px-3">Biomarker</th><th class="py-2 px-3 text-right">Value</th></tr>
+                                    </thead>
+                                    <tbody id="table-img-metrics" class="divide-y divide-slate-100 text-slate-700 font-mono">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <!-- Right Table: Electrochemical & Scanning Probe Sensor -->
-                        <div class="bg-white border border-slate-300 rounded overflow-hidden shadow-sm">
-                            <div class="bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 border-b border-slate-300">
+                        <div class="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs">
+                            <div class="bg-slate-100 px-3.5 py-2.5 text-xs font-bold text-slate-700 border-b border-slate-300">
                                 Electrochemical &amp; Scanning Probe Parameters
                             </div>
-                            <table class="w-full text-xs text-left">
-                                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
-                                    <tr><th class="py-1.5 px-3">Parameter</th><th class="py-1.5 px-3 text-right">Value</th></tr>
-                                </thead>
-                                <tbody id="table-sensor-metrics" class="divide-y divide-slate-100 text-slate-700 font-mono">
-                                    <!-- Populated dynamically -->
-                                </tbody>
-                            </table>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-left min-w-[260px]">
+                                    <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                        <tr><th class="py-2 px-3">Parameter</th><th class="py-2 px-3 text-right">Value</th></tr>
+                                    </thead>
+                                    <tbody id="table-sensor-metrics" class="divide-y divide-slate-100 text-slate-700 font-mono">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Download Report & Telemetry Buttons -->
-                <div class="pt-4 space-y-2">
+                <!-- Download Report & Telemetry Buttons (Adaptive Flex) -->
+                <div class="pt-2 space-y-2">
                     <h4 class="text-sm font-bold text-slate-900">Laboratory Data Export</h4>
-                    <div class="flex flex-wrap gap-4">
-                        <a id="btn-download-pdf-report" href="#" target="_blank" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded text-sm font-semibold transition shadow-sm">
+                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                        <a id="btn-download-pdf-report" href="#" target="_blank" class="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-4 sm:px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold transition shadow-xs text-center">
                             <span>📄 Download Official PDF Research Report</span>
                         </a>
-                        <a id="btn-download-telemetry" href="#" target="_blank" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-white hover:bg-slate-50 text-emerald-700 border border-emerald-300 rounded text-sm font-semibold transition shadow-sm">
+                        <a id="btn-download-telemetry" href="#" target="_blank" class="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-4 sm:px-5 py-2.5 bg-white hover:bg-slate-50 text-emerald-700 border border-emerald-300 rounded-lg text-xs sm:text-sm font-semibold transition shadow-xs text-center">
                             <span>💾 Download Laboratory Telemetry (CSV)</span>
                         </a>
                     </div>
@@ -497,32 +551,32 @@
 
         <!-- ==================== MODULE 2: AUDIT LOG & HISTORY ==================== -->
         <div id="module-history" class="hidden space-y-6">
-            <h3 class="text-xl font-bold text-slate-900">Audit Log &amp; Specimen History</h3>
+            <h3 class="text-lg sm:text-xl font-bold text-slate-900">Audit Log &amp; Specimen History</h3>
 
-            <!-- 4 Metrics Row -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white p-4 border border-slate-300 rounded shadow-sm text-center">
-                    <span class="text-xs font-medium text-slate-500">Total Cells Scanned</span>
-                    <div id="hist-total" class="text-2xl font-bold text-slate-900 mt-1">0</div>
+            <!-- 4 Metrics Row (Responsive 2 cols on mobile, 4 on lg) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs text-center">
+                    <span class="text-[11px] sm:text-xs font-medium text-slate-500">Total Cells Scanned</span>
+                    <div id="hist-total" class="text-xl sm:text-2xl font-bold text-slate-900 mt-1">0</div>
                 </div>
-                <div class="bg-white p-4 border border-slate-300 rounded shadow-sm text-center">
-                    <span class="text-xs font-medium text-slate-500">Abnormal Detection Rate</span>
-                    <div id="hist-rate" class="text-2xl font-bold text-red-600 mt-1">0.0%</div>
+                <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs text-center">
+                    <span class="text-[11px] sm:text-xs font-medium text-slate-500">Abnormal Detection Rate</span>
+                    <div id="hist-rate" class="text-xl sm:text-2xl font-bold text-red-600 mt-1">0.0%</div>
                 </div>
-                <div class="bg-white p-4 border border-slate-300 rounded shadow-sm text-center">
-                    <span class="text-xs font-medium text-slate-500">Average Model Confidence</span>
-                    <div id="hist-conf" class="text-2xl font-bold text-slate-900 mt-1">0.0%</div>
+                <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs text-center">
+                    <span class="text-[11px] sm:text-xs font-medium text-slate-500">Average Confidence</span>
+                    <div id="hist-conf" class="text-xl sm:text-2xl font-bold text-slate-900 mt-1">0.0%</div>
                 </div>
-                <div class="bg-white p-4 border border-slate-300 rounded shadow-sm text-center">
-                    <span class="text-xs font-medium text-slate-500">Average Research Risk Score</span>
-                    <div id="hist-risk" class="text-2xl font-bold text-slate-900 mt-1">0.00</div>
+                <div class="bg-white p-3.5 sm:p-4 border border-slate-300 rounded-xl shadow-xs text-center">
+                    <span class="text-[11px] sm:text-xs font-medium text-slate-500">Average Risk Score</span>
+                    <div id="hist-risk" class="text-xl sm:text-2xl font-bold text-slate-900 mt-1">0.00</div>
                 </div>
             </div>
 
-            <!-- Data Table -->
-            <div class="bg-white border border-slate-300 rounded overflow-hidden shadow-sm">
-                <div class="overflow-x-auto max-h-96">
-                    <table class="w-full text-left text-xs">
+            <!-- Data Table with Touch Scrolling -->
+            <div class="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs">
+                <div class="overflow-x-auto max-h-96 w-full">
+                    <table class="w-full text-left text-xs min-w-[700px]">
                         <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-300 sticky top-0">
                             <tr>
                                 <th class="py-2.5 px-3">id</th>
@@ -546,11 +600,11 @@
             </div>
 
             <!-- Export and Clear Buttons -->
-            <div class="flex space-x-4">
-                <a href="/api/export-csv" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-xs font-semibold text-slate-800 transition shadow-sm">
+            <div class="flex flex-col sm:flex-row gap-2.5 sm:gap-4">
+                <a href="/api/export-csv" class="w-full sm:w-auto text-center px-4 py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 transition shadow-xs">
                     📥 Export History to CSV
                 </a>
-                <button onclick="clearHistoryRecords()" class="px-4 py-2 bg-slate-100 hover:bg-red-50 text-red-600 border border-slate-300 hover:border-red-300 rounded text-xs font-semibold transition shadow-sm">
+                <button onclick="clearHistoryRecords()" class="w-full sm:w-auto text-center px-4 py-2.5 bg-slate-100 hover:bg-red-50 text-red-600 border border-slate-300 hover:border-red-300 rounded-lg text-xs font-semibold transition shadow-xs">
                     🗑️ Clear Audit History
                 </button>
             </div>
@@ -558,11 +612,12 @@
 
         <!-- ==================== MODULE 3: ARCHITECTURE & SPECS ==================== -->
         <div id="module-specs" class="hidden space-y-6">
-            <h3 class="text-xl font-bold text-slate-900">System Architecture &amp; Benchmark Specs</h3>
+            <h3 class="text-lg sm:text-xl font-bold text-slate-900">System Architecture &amp; Benchmark Specs</h3>
 
             <div class="space-y-3">
                 <h4 class="text-sm font-bold text-slate-800">Multimodal Pipeline Architecture</h4>
-                <pre class="bg-slate-100 p-4 border border-slate-300 rounded text-xs font-mono overflow-x-auto text-slate-800 leading-relaxed">
+                <div class="bg-slate-100 p-3 sm:p-4 border border-slate-300 rounded-xl overflow-x-auto">
+                    <pre class="text-[10px] sm:text-xs font-mono text-slate-800 leading-relaxed whitespace-pre min-w-[500px]">
 ┌───────────────────────────────────┐     ┌───────────────────────────────────┐
 │     Single-Cell Micrograph        │     │  Simulated Electrochemical Data   │
 │   (Giemsa Optical Microscopy)     │     │      (CV & EIS Spectrograms)      │
@@ -588,19 +643,20 @@
                   │    Healthy / Abnormal Classification  │
                   │      + Research Prototype Risk Score  │
                   └───────────────────────────────────────┘
-                </pre>
+                    </pre>
+                </div>
             </div>
 
             <div class="space-y-3 pt-2">
                 <h4 class="text-sm font-bold text-slate-800">Published Evaluation Metrics</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white p-3 border border-slate-300 rounded text-center">
-                        <img src="/reports/confusion_matrix.png" alt="Confusion Matrix" class="mx-auto max-h-64 object-contain">
-                        <span class="text-xs text-slate-500 mt-2 block">Confusion Matrix</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div class="bg-white p-3.5 border border-slate-300 rounded-xl text-center shadow-xs">
+                        <img src="/reports/confusion_matrix.png" alt="Confusion Matrix" class="mx-auto max-h-56 sm:max-h-64 object-contain">
+                        <span class="text-xs text-slate-500 mt-2 block font-medium">Confusion Matrix</span>
                     </div>
-                    <div class="bg-white p-3 border border-slate-300 rounded text-center">
-                        <img src="/reports/roc_curve.png" alt="ROC Curve" class="mx-auto max-h-64 object-contain">
-                        <span class="text-xs text-slate-500 mt-2 block">ROC Curve (AUC = 1.000)</span>
+                    <div class="bg-white p-3.5 border border-slate-300 rounded-xl text-center shadow-xs">
+                        <img src="/reports/roc_curve.png" alt="ROC Curve" class="mx-auto max-h-56 sm:max-h-64 object-contain">
+                        <span class="text-xs text-slate-500 mt-2 block font-medium">ROC Curve (AUC = 1.000)</span>
                     </div>
                 </div>
             </div>
@@ -626,6 +682,34 @@
             initDragAndDrop();
             onClassChange();
         });
+
+        // Window resize listener to auto-adjust charts across orientations
+        window.addEventListener('resize', () => {
+            [chartCvInstance, chartDpvInstance, chartEisInstance, chartBodeInstance, chartSecmAppInstance, chartCaInstance].forEach(c => {
+                if (c) c.resize();
+            });
+        });
+
+        // Mobile Sidebar Controls
+        function openMobileSidebar() {
+            const sidebar = document.getElementById('sidebar-container');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (!sidebar || !backdrop) return;
+            sidebar.classList.remove('-translate-x-full');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+            document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+        }
+
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar-container');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (!sidebar || !backdrop) return;
+            sidebar.classList.add('-translate-x-full');
+            backdrop.classList.add('opacity-0');
+            setTimeout(() => backdrop.classList.add('hidden'), 300);
+            document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
+        }
 
         function updateSpecimenStatusBanner(text, isReady = true) {
             const label = document.getElementById('active-specimen-label');
@@ -689,10 +773,24 @@
 
         function switchModule(mod) {
             ['analysis', 'history', 'specs'].forEach(m => {
-                document.getElementById(`module-${m}`).classList.add('hidden');
-                document.getElementById(`radio-${m}`).checked = (m === mod);
+                const el = document.getElementById(`module-${m}`);
+                if (el) el.classList.add('hidden');
+                const radio = document.getElementById(`radio-${m}`);
+                if (radio) radio.checked = (m === mod);
             });
-            document.getElementById(`module-${mod}`).classList.remove('hidden');
+            const target = document.getElementById(`module-${mod}`);
+            if (target) target.classList.remove('hidden');
+
+            // Update mobile header badge
+            const pill = document.getElementById('mobile-module-pill');
+            if (pill) {
+                if (mod === 'analysis') pill.innerText = 'Live Analysis';
+                else if (mod === 'history') pill.innerText = 'Audit Log';
+                else if (mod === 'specs') pill.innerText = 'Architecture';
+            }
+
+            // Auto-close drawer on mobile
+            closeMobileSidebar();
 
             if (mod === 'history') {
                 loadHistoryData();
@@ -732,7 +830,7 @@
 
         async function onClassChange() {
             const cat = document.getElementById('select-target-class').value;
-            // Also synchronize sensor condition to match class default
+            // Synchronize sensor condition to match class default
             document.getElementById('select-membrane-condition').value = cat;
 
             try {
@@ -801,9 +899,9 @@
                 const statusBox = document.getElementById('upload-image-status');
                 if (statusBox) {
                     statusBox.innerHTML = `
-                        <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded text-xs font-semibold">
-                            <span><i class="fa-solid fa-circle-check mr-1.5 text-emerald-600"></i> ${file.name} (${sizeKb} KB)</span>
-                            <button type="button" onclick="clearUploadedImage()" class="text-slate-400 hover:text-red-500 ml-2 text-xs font-bold">&times; Clear</button>
+                        <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                            <span class="truncate mr-2"><i class="fa-solid fa-circle-check mr-1.5 text-emerald-600"></i> ${file.name} (${sizeKb} KB)</span>
+                            <button type="button" onclick="clearUploadedImage()" class="text-slate-400 hover:text-red-500 ml-1 text-xs font-bold shrink-0">&times; Clear</button>
                         </div>
                     `;
                 }
@@ -850,12 +948,26 @@
                 if (!content || !btn) return;
                 if (t === tabName) {
                     content.classList.remove('hidden');
-                    btn.className = "pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-2 whitespace-nowrap";
+                    btn.className = "pb-2.5 sm:pb-3 border-b-2 border-red-500 text-red-600 flex items-center space-x-1.5 whitespace-nowrap font-bold text-xs sm:text-sm";
                 } else {
                     content.classList.add('hidden');
-                    btn.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 whitespace-nowrap";
+                    btn.className = "pb-2.5 sm:pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 whitespace-nowrap font-medium text-xs sm:text-sm";
                 }
             });
+
+            // Re-render and resize charts on tab reveal
+            setTimeout(() => {
+                if (tabName === 'tab-secm' && chartSecmAppInstance) chartSecmAppInstance.resize();
+                if (tabName === 'tab-voltammetry') {
+                    if (chartCvInstance) chartCvInstance.resize();
+                    if (chartDpvInstance) chartDpvInstance.resize();
+                }
+                if (tabName === 'tab-eis') {
+                    if (chartEisInstance) chartEisInstance.resize();
+                    if (chartBodeInstance) chartBodeInstance.resize();
+                }
+                if (tabName === 'tab-ca' && chartCaInstance) chartCaInstance.resize();
+            }, 60);
         }
 
         async function executeAnalysis() {
@@ -955,24 +1067,24 @@
 
             // 6. Tables
             document.getElementById('table-img-metrics').innerHTML = `
-                <tr><td class="py-1.5 px-3">Cell Area (px²)</td><td class="py-1.5 px-3 text-right">${data.image_features.cell_area}</td></tr>
-                <tr><td class="py-1.5 px-3">Circularity (0 to 1)</td><td class="py-1.5 px-3 text-right">${data.image_features.circularity}</td></tr>
-                <tr><td class="py-1.5 px-3">Aspect Ratio</td><td class="py-1.5 px-3 text-right">${data.image_features.aspect_ratio}</td></tr>
-                <tr><td class="py-1.5 px-3">Texture Variance</td><td class="py-1.5 px-3 text-right">${data.image_features.texture_variance}</td></tr>
-                <tr><td class="py-1.5 px-3">Mean Intensity</td><td class="py-1.5 px-3 text-right">${data.image_features.mean_intensity}</td></tr>
+                <tr><td class="py-2 px-3">Cell Area (px²)</td><td class="py-2 px-3 text-right">${data.image_features.cell_area}</td></tr>
+                <tr><td class="py-2 px-3">Circularity (0 to 1)</td><td class="py-2 px-3 text-right">${data.image_features.circularity}</td></tr>
+                <tr><td class="py-2 px-3">Aspect Ratio</td><td class="py-2 px-3 text-right">${data.image_features.aspect_ratio}</td></tr>
+                <tr><td class="py-2 px-3">Texture Variance</td><td class="py-2 px-3 text-right">${data.image_features.texture_variance}</td></tr>
+                <tr><td class="py-2 px-3">Mean Intensity</td><td class="py-2 px-3 text-right">${data.image_features.mean_intensity}</td></tr>
             `;
 
             document.getElementById('table-sensor-metrics').innerHTML = `
-                <tr><td class="py-1.5 px-3">Peak Anodic Current (Ipa)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.peak_anodic_current} µA</td></tr>
-                <tr><td class="py-1.5 px-3">Peak Cathodic Current (Ipc)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.peak_cathodic_current} µA</td></tr>
-                <tr><td class="py-1.5 px-3">Peak Separation (ΔEp)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.delta_peak_potential} mV</td></tr>
-                <tr><td class="py-1.5 px-3">Charge Transfer Res. (Rct)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.charge_transfer_resistance} Ω</td></tr>
-                <tr><td class="py-1.5 px-3">Capacitance (Cdl)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.double_layer_capacitance_uf} µF</td></tr>
-                <tr><td class="py-1.5 px-3">Solution Res. (Rs)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.solution_resistance} Ω</td></tr>
-                <tr><td class="py-1.5 px-3">Impedance |Z| at 1 Hz</td><td class="py-1.5 px-3 text-right">${data.sensor_features.impedance_low_freq} Ω</td></tr>
-                <tr><td class="py-1.5 px-3">Peak Phase Angle (θ_min)</td><td class="py-1.5 px-3 text-right">${data.sensor_features.min_phase_angle}°</td></tr>
-                <tr><td class="py-1.5 px-3">SECM Min Local Current</td><td class="py-1.5 px-3 text-right">${data.secm_data ? data.secm_data.surface_2d.min_probe_current_na : '-'} nA</td></tr>
-                <tr><td class="py-1.5 px-3">DPV Peak Differential</td><td class="py-1.5 px-3 text-right">${data.dpv_data ? data.dpv_data.peak_current_ua : '-'} µA</td></tr>
+                <tr><td class="py-2 px-3">Peak Anodic Current (Ipa)</td><td class="py-2 px-3 text-right">${data.sensor_features.peak_anodic_current} µA</td></tr>
+                <tr><td class="py-2 px-3">Peak Cathodic Current (Ipc)</td><td class="py-2 px-3 text-right">${data.sensor_features.peak_cathodic_current} µA</td></tr>
+                <tr><td class="py-2 px-3">Peak Separation (ΔEp)</td><td class="py-2 px-3 text-right">${data.sensor_features.delta_peak_potential} mV</td></tr>
+                <tr><td class="py-2 px-3">Charge Transfer Res. (Rct)</td><td class="py-2 px-3 text-right">${data.sensor_features.charge_transfer_resistance} Ω</td></tr>
+                <tr><td class="py-2 px-3">Capacitance (Cdl)</td><td class="py-2 px-3 text-right">${data.sensor_features.double_layer_capacitance_uf} µF</td></tr>
+                <tr><td class="py-2 px-3">Solution Res. (Rs)</td><td class="py-2 px-3 text-right">${data.sensor_features.solution_resistance} Ω</td></tr>
+                <tr><td class="py-2 px-3">Impedance |Z| at 1 Hz</td><td class="py-2 px-3 text-right">${data.sensor_features.impedance_low_freq} Ω</td></tr>
+                <tr><td class="py-2 px-3">Peak Phase Angle (θ_min)</td><td class="py-2 px-3 text-right">${data.sensor_features.min_phase_angle}°</td></tr>
+                <tr><td class="py-2 px-3">SECM Min Local Current</td><td class="py-2 px-3 text-right">${data.secm_data ? data.secm_data.surface_2d.min_probe_current_na : '-'} nA</td></tr>
+                <tr><td class="py-2 px-3">DPV Peak Differential</td><td class="py-2 px-3 text-right">${data.dpv_data ? data.dpv_data.peak_current_ua : '-'} µA</td></tr>
             `;
 
             // Technique Badges
@@ -1273,18 +1385,18 @@
                 }
 
                 tbody.innerHTML = data.records.map(r => `
-                    <tr class="hover:bg-slate-50">
-                        <td class="py-2 px-3 font-mono">${r.id}</td>
-                        <td class="py-2 px-3 whitespace-nowrap text-slate-500">${r.timestamp}</td>
-                        <td class="py-2 px-3 font-semibold text-slate-900">${r.sample_id}</td>
-                        <td class="py-2 px-3 font-bold ${r.prediction === 'Abnormal' ? 'text-red-600' : 'text-emerald-700'}">${r.prediction}</td>
-                        <td class="py-2 px-3 font-mono">${r.confidence}%</td>
-                        <td class="py-2 px-3 font-mono">${r.risk_score}</td>
-                        <td class="py-2 px-3 font-mono">${r.cell_area || '-'}</td>
-                        <td class="py-2 px-3 font-mono">${r.circularity || '-'}</td>
-                        <td class="py-2 px-3 font-mono">${r.peak_current || '-'}</td>
-                        <td class="py-2 px-3 font-mono">${r.rct_impedance || '-'}</td>
-                        <td class="py-2 px-3 text-slate-400">${r.notes || ''}</td>
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-2.5 px-3 font-mono">${r.id}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap text-slate-500">${r.timestamp}</td>
+                        <td class="py-2.5 px-3 font-semibold text-slate-900">${r.sample_id}</td>
+                        <td class="py-2.5 px-3 font-bold ${r.prediction === 'Abnormal' ? 'text-red-600' : 'text-emerald-700'}">${r.prediction}</td>
+                        <td class="py-2.5 px-3 font-mono">${r.confidence}%</td>
+                        <td class="py-2.5 px-3 font-mono">${r.risk_score}</td>
+                        <td class="py-2.5 px-3 font-mono">${r.cell_area || '-'}</td>
+                        <td class="py-2.5 px-3 font-mono">${r.circularity || '-'}</td>
+                        <td class="py-2.5 px-3 font-mono">${r.peak_current || '-'}</td>
+                        <td class="py-2.5 px-3 font-mono">${r.rct_impedance || '-'}</td>
+                        <td class="py-2.5 px-3 text-slate-400">${r.notes || ''}</td>
                     </tr>
                 `).join('');
             } catch (err) {
